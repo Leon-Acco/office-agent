@@ -1,0 +1,197 @@
+/**
+ * Office_Agent 设计令牌（Design Tokens）
+ * ============================================
+ * 所有颜色、间距、圆角、阴影的单一真相来源。
+ * 业务样式只能引用这里的变量，不允许硬编码颜色值。
+ *
+ * 待用户决策：品牌主色 --brand-primary
+ */
+
+:root {
+  /* ============================================
+   * 品牌主色（需要你决定！）
+   * 当前候选（参考 Figma Mascot 配色）：
+   *   选项 A - 深空蓝  #1E40AF   （稳重、企业感，适合 toB）
+   *   选项 B - 青蓝    #0EA5E9   （科技、清新，适合 AI 产品）
+   *   选项 C - 紫罗兰  #7C3AED   （未来感、创意，强调"AI 公司"）
+   *   选项 D - 翠绿    #059669   （当前默认色，生命/成长）
+   * ============================================ */
+  --brand-primary: #1E40AF;       /* TODO: 用户选定后改这里 */
+  --brand-primary-hover: #1E3A8A; /* 主色 hover 状态，加深 8% */
+  --brand-primary-light: #EFF6FF;/* 主色浅底，用于徽章背景 */
+  --brand-primary-soft: #DBEAFE; /* 主色柔光，用于 hover 背景 */
+
+  /* ============================================
+   * 语义色（状态指示，与品牌色解耦）
+   * ============================================ */
+  --status-success: #059669;
+  --status-success-bg: #ECFDF5;
+  --status-warning: #D97706;
+  --status-warning-bg: #FEF3C7;
+  --status-danger: #DC2626;
+  --status-danger-bg: #FEE2E2;
+  --status-info: #0EA5E9;
+  --status-info-bg: #F0F9FF;
+  --status-neutral: #6B7280;
+  --status-neutral-bg: #F3F4F6;
+
+  /* ============================================
+   * 文字层级（4 级灰阶）
+   * ============================================ */
+  --text-primary: #111827;    /* 标题、主文本 */
+  --text-secondary: #4B5563;  /* 次级内容 */
+  --text-tertiary: #9CA3AF;   /* 辅助说明、meta */
+  --text-on-brand: #FFFFFF;   /* 主色按钮上的文字 */
+  --text-on-dark: #F9FAFB;    /* 深色背景上的文字 */
+
+  /* ============================================
+   * 背景层级
+   * ============================================ */
+  --bg-page: #F9FAFB;          /* 页面底色 */
+  --bg-surface: #FFFFFF;       /* 卡片/弹层 */
+  --bg-input: #F3F4F6;         /* 输入框、头像背景 */
+  --bg-hover: #F9FAFB;         /* 列表项 hover */
+  --bg-dark: #111827;          /* 深色按钮 */
+  --bg-sidebar: #FFFFFF;       /* 侧边栏背景 */
+
+  /* ============================================
+   * 圆角（参考 Figma: 按钮 8px / 卡片 16px / 徽章 12px）
+   * ============================================ */
+  --radius-xs: 4px;    /* 小标签 */
+  --radius-sm: 6px;    /* 小按钮 */
+  --radius-md: 8px;    /* 主按钮、输入框（Figma 主流值） */
+  --radius-lg: 12px;   /* 徽章、小卡片 */
+  --radius-xl: 16px;   /* 大卡片、弹层 */
+  --radius-full: 999px;/* 胶囊 */
+
+  /* ============================================
+   * 间距（8 倍数系统，参考 Figma 容器边距 48px）
+   * ============================================ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;   /* Figma 容器外边距 */
+
+  /* ============================================
+   * 字体（Figma: 中文系统默认 + 数字/英文优先 Inter）
+   * ============================================ */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI",
+               "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+               "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* 字号梯度 */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 15px;
+  --text-xl: 18px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+
+  /* ============================================
+   * 阴影（3 级）
+   * ============================================ */
+  --shadow-sm: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow-card: 0 2px 8px rgba(17, 24, 39, 0.06);
+  --shadow-modal: 0 20px 60px rgba(17, 24, 39, 0.15);
+
+  /* ============================================
+   * 边框
+   * ============================================ */
+  --border-light: #F3F4F6;
+  --border-default: #E5E7EB;
+  --border-strong: #D1D5DB;
+
+  /* ============================================
+   * 过渡动画
+   * ============================================ */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ============================================
+   * 布局常量
+   * ============================================ */
+  --sidebar-width: 220px;
+  --topbar-height: 56px;
+  --content-max-width: 1440px;
+  --login-split-left: 50%;   /* Figma: 严格 50/50 双栏 */
+  --login-split-right: 50%;
+}
+
+/* ============================================
+ * 全局重置（引用令牌）
+ * ============================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  color: var(--text-primary);
+  background: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), opacity var(--transition-fast);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: var(--text-md);
+}
+
+/* ============================================
+ * 通用工具类
+ * ============================================ */
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-tertiary { color: var(--text-tertiary); }
+
+.bg-brand { background: var(--brand-primary); color: var(--text-on-brand); }
+.bg-success { background: var(--status-success-bg); color: var(--status-success); }
+.bg-warning { background: var(--status-warning-bg); color: var(--status-warning); }
+.bg-danger { background: var(--status-danger-bg); color: var(--status-danger); }
+
+/* 主按钮（所有页面复用） */
+.btn-primary {
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-md);
+  font-weight: 500;
+  transition: background var(--transition-fast);
+}
+.btn-primary:hover:not(:disabled) { background: var(--brand-primary-hover); }
+
+/* 次按钮 */
+.btn-secondary {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+.btn-secondary:hover { background: var(--bg-hover); border-color: var(--border-strong); }

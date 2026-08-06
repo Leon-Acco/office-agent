@@ -1,0 +1,8 @@
+# Office_Agent 后端依赖
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+sqlalchemy[asyncio]==2.0.36
+aiosqlite==0.20.0
+pydantic==2.10.4
+python-multipart==0.0.20
+alembic==1.14.0

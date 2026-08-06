@@ -1,0 +1,31 @@
+# Office_Agent systemd 服务单元
+# 安装路径：/etc/systemd/system/office-agent.service
+# 注意：${APP_HOST}/${APP_PORT} 由 EnvironmentFile 中的变量注入（systemd 变量替换）
+[Unit]
+Description=Office_Agent 多 Agent 虚拟办公室后端服务
+After=network.target
+# 中间件（MySQL/Redis）在外部 172.16.8.225，无需 After 本机数据库
+
+[Service]
+Type=simple
+# 运行用户（生产建议建独立用户，如 office；install.sh 默认用当前执行者）
+User=root
+Group=root
+# 项目根目录（install.sh 按实际部署路径替换）
+WorkingDirectory=/opt/office-agent
+# 环境变量文件（密钥集中在此，权限应设 600）
+EnvironmentFile=-/opt/office-agent/deploy/office-agent.env
+# 启动命令：uvicorn 绑定地址/端口由 env 注入，-X utf8 保证中文日志正常
+ExecStart=/opt/office-agent/.venv/bin/python -X utf8 -m uvicorn backend.main:app --host ${APP_HOST} --port ${APP_PORT}
+# 崩溃自动重启（不 reload，生产模式）
+Restart=on-failure
+RestartSec=5
+# 启动超时（首次 init_db 建表可能较慢）
+TimeoutStartSec=120
+TimeoutStopSec=30
+# 日志走 journald：journalctl -u office-agent -f
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
