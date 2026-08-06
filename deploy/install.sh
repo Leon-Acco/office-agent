@@ -15,13 +15,21 @@ PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP_DIR="${APP_DIR:-/opt/office-agent}"
 VENV_DIR="$APP_DIR/.venv"
 
-echo "==> [1/6] 检查系统依赖（python3>=3.10, git）"
+echo "==> [1/6] 检查系统依赖（python3>=3.10, git, ensurepip）"
 need_install=""
 command -v git >/dev/null 2>&1 || need_install="$need_install git"
 if command -v python3 >/dev/null 2>&1; then
     PY_VER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
     python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' \
         || { echo "ERROR: python3 版本 $PY_VER 过低，代码使用 3.10+ 语法（str | None）"; exit 1; }
+    # Debian/Ubuntu 的 python3 默认不带 ensurepip,venv 会创建失败,需单独的 python3-venv 包
+    if ! python3 -c "import ensurepip" >/dev/null 2>&1; then
+        if command -v apt-get >/dev/null 2>&1; then
+            need_install="$need_install python3-venv"
+        else
+            echo "ERROR: python3 缺 ensurepip 模块，请手动安装 venv 支持后重跑"; exit 1
+        fi
+    fi
 else
     need_install="$need_install python3"
 fi

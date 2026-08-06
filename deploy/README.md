@@ -140,6 +140,7 @@ cd /opt/office-agent
 
 | 现象 | 可能原因 | 处理 |
 |------|---------|------|
+| install.sh 报 ensurepip is not available | Ubuntu/Debian 的 python3 不带 venv 模块 | `apt install python3.12-venv`（版本号对应 python3 版本），删掉半成品 `.venv` 后重跑；新版 install.sh 已自动检测安装 |
 | 启动报 DB 初始化失败 | 服务器与 225:30316 不通，或密钥填错 | `telnet 172.16.8.225 30316` 验证网络；检查 env 文件 |
 | 前端聊天不逐字输出 | nginx 缓冲了 SSE | 确认 `proxy_buffering off` 生效 |
 | clone 仓库 Permission denied | 服务器 SSH key 未加 GitLab | 执行第 5 步前置 |
