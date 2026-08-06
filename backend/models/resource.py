@@ -28,6 +28,8 @@ class Resource(Base):
     url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="ready")  # ready/indexing/pending
     owner: Mapped[str] = mapped_column(String(100), default="")
+    # 上传文档解析后的 Markdown 全文(入库后跨机可读,不再依赖各机本地 uploads 目录)
+    content: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 

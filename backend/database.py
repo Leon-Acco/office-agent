@@ -55,6 +55,8 @@ async def ensure_columns():
         ("task_assignment", "discussion_note", "ALTER TABLE task_assignment ADD COLUMN discussion_note TEXT NULL"),
         ("repository", "auto_refresh_minutes", "ALTER TABLE repository ADD COLUMN auto_refresh_minutes INT NULL"),
         ("repository", "last_sync_at", "ALTER TABLE repository ADD COLUMN last_sync_at DATETIME NULL"),
+        ("repository", "description", "ALTER TABLE repository ADD COLUMN description TEXT NULL"),
+        ("resource", "content", "ALTER TABLE resource ADD COLUMN content MEDIUMTEXT NULL"),
     ]
     async with engine.begin() as conn:
         def _check(sync_conn):

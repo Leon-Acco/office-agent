@@ -224,8 +224,8 @@ async def search_resources(q: str = "", db: AsyncSession = Depends(get_db)):
             hits.append({"id": r.id, "name": r.name, "type": r.type, "icon": r.icon,
                          "match_in": "name", "snippet": (r.description or "")[:120]})
             continue
-        # 正文检索:仅对已解析出 Markdown 的上传资源(小文件规模,LIKE 成本可忽略)
-        md = file_service.read_upload_md(r.id) if (r.url or "").endswith("/md") else None
+        # 正文检索:DB content 优先(md 全文已入库,跨机可读),本机文件兜底兼容旧数据
+        md = r.content or (file_service.read_upload_md(r.id) if (r.url or "").endswith("/md") else None)
         if md:
             idx = md.lower().find(ql)
             if idx >= 0:
@@ -298,6 +298,9 @@ async def upload_resource(
                 "pptx": "📙", "ppt": "📙", "py": "🐍", "java": "☕", "js": "📜"}
     icon = icon_map.get(ext, "📄")
 
+    # 解析成功的 md 全文入库(共享 DB + 各机本地盘架构下,文件只在上传机上,入库后跨机可读)
+    md_full = file_service.read_upload_md(result["file_id"]) if result.get("parse_success") else ""
+
     resource = Resource(
         id=result["file_id"],
         name=result["original_name"],
@@ -307,6 +310,7 @@ async def upload_resource(
         url=f"/api/admin/resources/{result['file_id']}/md",
         status="ready" if result.get("parse_success") else "parse_failed",
         owner="uploader",
+        content=md_full or "",
     )
     db.add(resource)
     await db.flush()
@@ -321,11 +325,12 @@ async def upload_resource(
 
 
 @router.get("/resources/{rid}/md")
-async def get_resource_markdown(rid: str):
-    """获取资源解析后的 Markdown 内容"""
+async def get_resource_markdown(rid: str, db: AsyncSession = Depends(get_db)):
+    """获取资源解析后的 Markdown 内容(DB content 优先,本机文件兜底兼容旧数据)"""
     from backend.services import file_service
-    md = file_service.read_upload_md(rid)
-    if md is None:
+    r = (await db.execute(select(Resource).where(Resource.id == rid))).scalar_one_or_none()
+    md = (r.content if r else "") or file_service.read_upload_md(rid)
+    if not md:
         raise HTTPException(404, "Markdown 内容不存在（可能未解析或解析失败）")
     return {"file_id": rid, "content": md, "length": len(md)}
 

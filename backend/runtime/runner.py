@@ -178,12 +178,12 @@ class AgentRunner:
             )
 
         # 预算耗尽兜底（借鉴 nanobot finalize_on_max_iterations）
-        # 做一次无工具的收尾调用，给用户一个回答（4000 防长文截断）
+        # 做一次无工具的收尾调用，给用户一个回答（8000:GLM 推理模型的思考链与正文共享预算,4000 易被思考吃光）
         messages.append({
             "role": "user",
             "content": "请基于已收集的信息，给出完整、详细的最终回答（结论 + 依据 + 展开说明）。",
         })
-        final = await self.provider.chat(messages, tools=None, max_tokens=4000)
+        final = await self.provider.chat(messages, tools=None, max_tokens=8000)
 
         return AgentRunResult(
             final_content=final.content or "抱歉，我在处理过程中超出了预算限制。请尝试简化问题。",
@@ -331,7 +331,7 @@ class AgentRunner:
             "content": "请基于已收集的信息，给出完整、详细的最终回答（结论 + 依据 + 展开说明）。",
         })
         try:
-            async for chunk_text, response in self.provider.chat_stream(messages, tools=None, max_tokens=4000):
+            async for chunk_text, response in self.provider.chat_stream(messages, tools=None, max_tokens=8000):
                 if chunk_text:
                     yield {"type": "answer.chunk", "content": chunk_text}
                 if response and response.is_final:

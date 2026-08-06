@@ -157,6 +157,9 @@ class Repository(Base):
     languages: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     state: Mapped[str] = mapped_column(String(24), default="CONNECTING")
     owner: Mapped[str] = mapped_column(String(100), default="")
+    # 仓库一句话职责说明,由 build_system_prompt 动态渲染进「绑定仓库+说明」,
+    # 取代 agents_md 里手写的易漂移仓库清单
+    description: Mapped[str] = mapped_column(Text, default="")
     # 定时自动拉取间隔(分钟),NULL/0=关闭(第 7 轮需求:仓库定时刷新)
     auto_refresh_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 上次同步(拉取)时间,手动 pull / 定时刷新都会更新

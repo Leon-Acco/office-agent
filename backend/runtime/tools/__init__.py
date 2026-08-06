@@ -159,7 +159,7 @@ class SearchResourceTool(Tool):
 
     @property
     def description(self) -> str:
-        return "搜索公司资源库（代码仓库、API 文档、数据集）。输入资源名称或类型。"
+        return "搜索公司资源库（代码仓库、API 文档、数据集）。文档类资源返回正文内容，可直接阅读。输入资源名称或正文关键词。"
 
     @property
     def parameters(self) -> dict:
@@ -168,7 +168,7 @@ class SearchResourceTool(Tool):
             "properties": {
                 "keyword": {
                     "type": "string",
-                    "description": "资源名称关键词（可为空，空时返回全部资源）",
+                    "description": "资源名称或正文关键词（可为空，空时返回全部资源）",
                 },
                 "type": {
                     "type": "string",
@@ -184,23 +184,40 @@ class SearchResourceTool(Tool):
         return True
 
     async def execute(self, db: AsyncSession, keyword: str = "", type: str = "") -> ToolResult:
-        """执行搜索"""
+        """执行搜索：名称命中返回正文预览；名称无命中则退到正文 LIKE 检索并返回命中片段"""
         sql = select(Resource)
         if type:
             sql = sql.where(Resource.type == type)
-        if keyword:
-            sql = sql.where(Resource.name.contains(keyword))
-        sql = sql.limit(5)
+        items = (await db.execute(sql)).scalars().all()
+        kw = (keyword or "").strip().lower()
 
-        result = await db.execute(sql)
-        items = result.scalars().all()
+        if kw:
+            name_hits = [r for r in items if kw in (r.name or "").lower()]
+            if name_hits:
+                hits, mode = name_hits[:5], "name"
+            else:
+                hits = [r for r in items if kw in (r.content or "").lower()][:5]
+                mode = "content"
+        else:
+            hits, mode = items[:5], "all"
 
-        if not items:
+        if not hits:
             return ToolResult.ok(f"未找到与 '{keyword}' 相关的资源。")
 
-        lines = [f"找到 {len(items)} 个相关资源：\n"]
-        for r in items:
-            lines.append(f"- {r.icon} {r.name}（类型: {r.type}）\n  URL: {r.url or '无'} | 状态: {r.status}\n  描述: {r.description[:200]}\n")
+        lines = [f"找到 {len(hits)} 个相关资源：\n"]
+        for r in hits:
+            lines.append(f"- {r.icon} {r.name}（类型: {r.type}）\n  URL: {r.url or '无'} | 状态: {r.status}\n  描述: {(r.description or '')[:200]}\n")
+            # name 命中且正文已入库:附正文预览,LLM 可直接阅读文档内容
+            if mode == "name" and r.content:
+                preview = r.content[:2000]
+                more = f"\n  …（全文共 {len(r.content)} 字，可换更精确的正文关键词继续检索）" if len(r.content) > 2000 else ""
+                lines.append(f"  正文:\n{preview}{more}\n")
+            elif mode == "content":
+                idx = r.content.lower().find(kw)
+                start = max(0, idx - 150)
+                end = min(len(r.content), idx + len(kw) + 150)
+                snippet = ("…" if start > 0 else "") + r.content[start:end] + ("…" if end < len(r.content) else "")
+                lines.append(f"  正文命中片段: {snippet}\n")
         return ToolResult.ok("\n".join(lines))
 
 

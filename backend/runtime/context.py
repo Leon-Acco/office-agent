@@ -85,6 +85,9 @@ class AgentContext:
     # 为空表示不限制（总前台自答 / 未绑定员工保持全局检索）
     allowed_repos: list[str] = field(default_factory=list)  # 绑定仓库白名单
     default_repo: Optional[str] = None  # 恰好绑定 1 个仓库时自动填充，repo_id 可省略
+    # 绑定仓库详情 [{name, description}],prompt 动态渲染「绑定仓库+说明」用,
+    # 取代 agents_md 里手写的易漂移仓库清单
+    repo_details: list[dict] = field(default_factory=list)
 
     # 预算
     budget: Budget = field(default_factory=Budget)
@@ -167,6 +170,7 @@ async def build_context(
     # 失败静默降级为空列表 = 全局检索（总前台自答 / 未绑定员工不受影响）
     allowed_repos: list[str] = []
     default_repo: Optional[str] = None
+    repo_details: list[dict] = []
     try:
         from backend.models.governance import AgentRepoBinding, Repository
         binding_repo_ids = (await db.execute(
@@ -182,6 +186,7 @@ async def build_context(
                     allowed_repos.append(r.name)
                 if r.id and r.id not in allowed_repos:
                     allowed_repos.append(r.id)
+                repo_details.append({"name": r.name, "description": r.description or ""})
             # 恰好绑定 1 个仓库时作为默认值，工具调用可省略 repo_id
             named = [r.name for r in repos if r.name]
             if len(set(named)) == 1:
@@ -221,6 +226,7 @@ async def build_context(
         resources=resources,
         allowed_repos=allowed_repos,
         default_repo=default_repo,
+        repo_details=repo_details,
         budget=budget,
         history=history,
     )
@@ -245,15 +251,16 @@ def build_system_prompt(context: AgentContext) -> str:
 ## 授权资源
 """
     # 绑定的代码仓库（来自 AgentRepoBinding，检索工具会自动限定在该范围内）
-    bound_repos = [r for r in context.allowed_repos if r]
-    if bound_repos:
+    # 渲染 name + description(职责说明存 repository.description,改绑定/改说明即生效,不再有 agents_md 漂移)
+    if context.repo_details:
         prompt += "  绑定代码仓库：\n"
-        for r in bound_repos:
-            prompt += f"  - 💻 {r}\n"
+        for r in context.repo_details:
+            desc = f" — {r['description']}" if r.get("description") else ""
+            prompt += f"  - 💻 {r['name']}{desc}\n"
     # resources 字符串列表降级为补充展示（不再作为任何逻辑输入）
     for r in context.resources:
         prompt += f"  - {r}\n"
-    if not bound_repos and not context.resources:
+    if not context.repo_details and not context.resources:
         prompt += "  （未绑定专属资源，可全局检索）\n"
 
     # AGENTS.md 行为准则（Harness Engineering：员工级人格/边界指令，截断防 prompt 膨胀）
