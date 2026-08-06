@@ -23,3 +23,6 @@ pyyaml==6.0.2
 
 # MCP 客户端（官方 SDK，SSE transport 支持自定义 headers）
 mcp==1.26.0
+
+# 上传文件解析为 Markdown(pdf/docx/xlsx/xls/pptx 需对应 extras,否则解析静默失败 /md 404)
+markitdown[pdf,docx,xlsx,xls,pptx]==0.1.6
