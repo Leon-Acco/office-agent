@@ -852,20 +852,20 @@ const ChatModule = {
             aiMsg.tools = []; // 工具调用记录
             this.renderMessages();
           } else if (eventType === 'tool.start') {
-            // 工具调用开始
+            // 工具调用开始:增量追加叙事行,不触发全量渲染(消除卡顿)
             aiMsg.tools = aiMsg.tools || [];
             aiMsg.tools.push({ name: data.name, arguments: data.arguments, status: 'running', result: '' });
             aiMsg.toolActive = true;
-            this.updateLastMessage();
+            this.streamToolStart(aiMsg, aiMsg.tools.length - 1);
           } else if (eventType === 'tool.result') {
-            // 工具调用结果
+            // 工具调用结果:只重绘对应那一行
             if (aiMsg.tools && aiMsg.tools.length > 0) {
               const lastTool = aiMsg.tools[aiMsg.tools.length - 1];
               lastTool.status = data.is_error ? 'error' : 'done';
               lastTool.result = data.result || '';
+              this.streamToolResult(aiMsg, aiMsg.tools.length - 1);
             }
             aiMsg.toolActive = false;
-            this.updateLastMessage();
           } else if (eventType === 'answer.chunk') {
             aiMsg.content += data.content;
             this.scheduleStreamRender();   // 节流渲染,避免 chunk 高频触发全文重建
@@ -1088,6 +1088,131 @@ const ChatModule = {
   },
 
   /**
+   * 工具调用叙事文案(方案 A:技术日志 → 思考过程)
+   * 内置工具逐一映射为自然语言;MCP/未知工具兜底「调用 工具名」
+   */
+  toolNarrative(t) {
+    const args = t.arguments || {};
+    const esc = (s) => this.escape(String(s ?? ''));
+    // 路径只显文件名,完整路径折叠进详情(默认折叠长路径)
+    const basename = (p) => {
+      const s = String(p || '').replace(/\\/g, '/');
+      return esc(s.split('/').pop() || s);
+    };
+    switch (t.name) {
+      case 'searchCode': return `搜索关键词 “${esc(args.query)}”`;
+      case 'searchInDocs': return `在文档中搜索 “${esc(args.query)}”`;
+      case 'getCodeExcerpt': return `查看 ${basename(args.file_path)}`;
+      case 'listFiles': return `浏览 ${args.subdir ? esc(args.subdir) : '根'}目录`;
+      case 'getProjectStructure': return '分析项目结构';
+      case 'searchKnowledge': return `检索知识库 “${esc(args.query)}”`;
+      case 'getEmployeeInfo': return args.query ? `查找员工 “${esc(args.query)}”` : '查看员工列表';
+      case 'searchResource': return args.keyword ? `查找资源 “${esc(args.keyword)}”` : '查看资源列表';
+      case 'cloneRepo': return `拉取仓库 ${esc(args.repo_id || args.clone_url)}`;
+      case 'loadSkill': return `加载能力 ${esc(args.skill_key)}`;
+      default: return `调用 ${esc(t.name)}`;
+    }
+  },
+
+  /**
+   * 从工具结果首行提取统计摘要(后端各工具首行均为「找到 N 处匹配/个文件/条知识…」格式)
+   */
+  toolResultSummary(t) {
+    if (!t.result) return '';
+    const firstLine = String(t.result).split('\n')[0] || '';
+    const m = firstLine.match(/找到\s*\d+\s*[^\s:：,，]+/);
+    if (m) return `→ ${m[0]}`;
+    if (/未找到/.test(firstLine)) return '→ 未找到';
+    return '';
+  },
+
+  /** 流式期间的「正在分析」标题行(容器内固定 id,去重判断用) */
+  toolStreamHeader(msg) {
+    const name = this.escape(msg.agentName || '员工');
+    return `<div id="ai-tools-header" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="display:inline-block;width:10px;height:10px;border:2px solid var(--text-tertiary);border-top-color:transparent;border-radius:50%;animation:chat-spin 0.8s linear infinite;"></span>
+      <span style="font-size:12px;color:var(--text-tertiary);">${name} 正在分析您的需求…</span>
+    </div>`;
+  },
+
+  /**
+   * 渲染一条工具叙事行(树形前缀 + 状态图标 + 叙事 + 结果摘要;点击展开完整参数与结果原文)
+   */
+  renderToolNarrativeLine(msg, t, idx) {
+    const isLast = idx === msg.tools.length - 1;
+    const statusIcon = t.status === 'running'
+      ? '<span style="display:inline-block;width:10px;height:10px;border:2px solid var(--text-tertiary);border-top-color:transparent;border-radius:50%;animation:chat-spin 0.8s linear infinite;flex-shrink:0;"></span>'
+      : t.status === 'error'
+        ? '<span style="color:#DC2626;font-size:12px;flex-shrink:0;">✕</span>'
+        : '<span style="color:#059669;font-size:12px;flex-shrink:0;">✓</span>';
+    const summary = t.status === 'done' ? this.toolResultSummary(t)
+      : t.status === 'error' ? '→ 执行失败' : '';
+    const summaryColor = t.status === 'error' ? '#DC2626' : 'var(--text-tertiary)';
+    const argStr = t.arguments ? Object.entries(t.arguments).map(([k, v]) => `${k}=${v}`).join(', ') : '';
+
+    return `<div class="tool-line" style="margin-bottom:2px;">
+      <div style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:6px;cursor:pointer;transition:background 0.15s;"
+           onclick="ChatModule.toggleToolLineDetail(this)"
+           onmouseover="this.style.background='var(--bg-page)'" onmouseout="this.style.background=''">
+        <span class="tool-line-prefix" style="color:var(--text-tertiary);font-size:12px;font-family:monospace;flex-shrink:0;">${isLast ? '└─' : '├─'}</span>
+        ${statusIcon}
+        <span style="font-size:13px;color:var(--text-secondary);">${this.toolNarrative(t)}</span>
+        ${summary ? `<span style="font-size:12px;color:${summaryColor};margin-left:2px;flex-shrink:0;">${summary}</span>` : ''}
+      </div>
+      <div class="tool-line-detail" style="display:none;margin:2px 0 4px 30px;padding:8px 10px;background:var(--bg-input);border-radius:6px;font-size:11px;color:var(--text-secondary);font-family:monospace;max-height:160px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;">
+        ${argStr ? `<div style="margin-bottom:6px;color:var(--text-tertiary);">${this.escape(argStr)}</div>` : ''}
+        ${t.result ? this.escape(t.result) : '<span style="color:var(--text-tertiary);">执行中…</span>'}
+      </div>
+    </div>`;
+  },
+
+  /** 展开/收起单条工具行的详情(参数 + 结果原文),用兄弟节点定位,无 id 冲突 */
+  toggleToolLineDetail(lineHeaderEl) {
+    const detail = lineHeaderEl.parentElement.querySelector('.tool-line-detail');
+    if (detail) detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+  },
+
+  /** 展开/收起已完成消息的整个工具过程区(箭头随动旋转) */
+  toggleToolProcess(headerEl) {
+    const detail = headerEl.nextElementSibling;
+    if (!detail) return;
+    const open = detail.style.display !== 'none';
+    detail.style.display = open ? 'none' : 'block';
+    const chev = headerEl.querySelector('.tool-process-chevron');
+    if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+  },
+
+  /**
+   * 流式期间增量渲染:工具开始 → 容器内追加一行(首次先插入「正在分析」头),
+   * 不触发 updateLastMessage 的全量 Markdown 重建,消除工具高频事件造成的卡顿
+   */
+  streamToolStart(msg, idx) {
+    const box = document.getElementById('ai-streaming-tools');
+    if (!box) return;
+    if (!document.getElementById('ai-tools-header')) {
+      box.insertAdjacentHTML('afterbegin', this.toolStreamHeader(msg));
+    }
+    // 新的末行出现前,把原末行的树形前缀 └─ 改为 ├─
+    const lines = box.querySelectorAll('.tool-line');
+    if (lines.length) {
+      const prev = lines[lines.length - 1].querySelector('.tool-line-prefix');
+      if (prev) prev.textContent = '├─';
+    }
+    box.insertAdjacentHTML('beforeend', this.renderToolNarrativeLine(msg, msg.tools[idx], idx));
+    this.scrollToBottomIfPinned();
+  },
+
+  /** 流式期间增量渲染:工具结果到达 → 只重绘对应那一行 */
+  streamToolResult(msg, idx) {
+    const box = document.getElementById('ai-streaming-tools');
+    if (!box) return;
+    const line = box.querySelectorAll('.tool-line')[idx];
+    if (!line) return;
+    line.outerHTML = this.renderToolNarrativeLine(msg, msg.tools[idx], idx);
+    this.scrollToBottomIfPinned();
+  },
+
+  /**
    * 渲染员工答案卡片
    *   - 头部：头像 + 员工姓名 + 部门/领域
    *   - 工具调用折叠区（流式期间）
@@ -1117,35 +1242,27 @@ const ChatModule = {
         ? `<div class="ai-answer-content" style="font-size:14px;line-height:22px;color:var(--text-primary);">${this.renderMarkdown(msg.content)}</div>`
         : '');
 
-    // 工具调用展示（折叠式设计，默认只显示工具名+状态）
-    const toolsHtml = (msg.tools && msg.tools.length > 0) ? `
-      <div style="padding:0 0 8px;">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-          <span style="font-size:11px;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;">工具调用 (${msg.tools.length})</span>
+    // 工具调用叙事区(方案 A:折叠聚合 + 过程叙事)
+    // 流式期间:容器常驻固定 id,工具行由 streamToolStart/streamToolResult 增量写入,不重建 DOM;
+    // 完成后:自动折叠为一行摘要(直接展示结论),点击才展开过程,每行可再展开参数与结果原文
+    let toolsHtml = '';
+    if (msg.streaming) {
+      toolsHtml = `<div id="ai-streaming-tools" style="padding:0 0 10px;">${msg.tools && msg.tools.length
+        ? this.toolStreamHeader(msg) + msg.tools.map((t, i) => this.renderToolNarrativeLine(msg, t, i)).join('')
+        : ''}</div>`;
+    } else if (msg.tools && msg.tools.length > 0) {
+      const errCount = msg.tools.filter(t => t.status === 'error').length;
+      toolsHtml = `<div style="padding:0 0 10px;">
+        <div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;width:fit-content;" onclick="ChatModule.toggleToolProcess(this)">
+          <span style="color:${errCount ? '#DC2626' : '#059669'};font-size:12px;">${errCount ? '✕' : '✓'}</span>
+          <span style="font-size:12px;color:var(--text-tertiary);">已完成分析(${msg.tools.length} 步)${errCount ? `,${errCount} 步失败` : ''}</span>
+          <span class="material-symbols-outlined tool-process-chevron" style="font-size:16px;color:var(--text-tertiary);transition:transform 0.2s;">expand_more</span>
         </div>
-        ${msg.tools.map((t, idx) => {
-          const statusIcon = t.status === 'running' ? '<span style="display:inline-block;width:10px;height:10px;border:2px solid var(--text-tertiary);border-top-color:transparent;border-radius:50%;animation:chat-spin 0.8s linear infinite;"></span>'
-            : t.status === 'error' ? '<span style="color:#DC2626;font-size:12px;">✕</span>'
-            : '<span style="color:#059669;font-size:12px;">✓</span>';
-          const argStr = t.arguments ? Object.entries(t.arguments).map(([k,v]) => `${k}=${v}`).join(', ') : '';
-          const hasResult = t.result && t.result.length > 0;
-          const isError = t.status === 'error';
-          const previewText = hasResult ? (t.result.length > 150 ? t.result.substring(0, 150) + '...' : t.result) : '';
-          const detailId = `tool-detail-${idx}`;
-
-          return `<div style="margin-bottom:4px;">
-            <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg-page);border-radius:6px;cursor:pointer;"
-                 onclick="document.getElementById('${detailId}').style.display = document.getElementById('${detailId}').style.display === 'none' ? 'block' : 'none'">
-              ${statusIcon}
-              <span style="font-size:12px;font-weight:500;color:var(--text-primary);font-family:monospace;">${t.name}</span>
-              ${argStr ? `<span style="font-size:11px;color:var(--text-tertiary);font-family:monospace;">(${argStr})</span>` : ''}
-              ${hasResult ? `<span style="font-size:10px;color:${isError ? '#DC2626' : 'var(--text-tertiary)'};margin-left:auto;">${isError ? '查看错误' : '查看结果'}</span>` : ''}
-            </div>
-            ${hasResult ? `<div id="${detailId}" style="display:none;margin-top:2px;padding:8px 10px;background:${isError ? '#FEF2F2' : 'var(--bg-input)'};border-radius:6px;font-size:11px;color:${isError ? '#991B1B' : 'var(--text-secondary)'};font-family:monospace;max-height:120px;overflow-y:auto;">${this.escape(t.result)}</div>` : ''}
-          </div>`;
-        }).join('')}
-      </div>
-    ` : '';
+        <div class="tool-process-detail" style="display:none;margin-top:6px;">
+          ${msg.tools.map((t, i) => this.renderToolNarrativeLine(msg, t, i)).join('')}
+        </div>
+      </div>`;
+    }
 
     // 长文（>800 字符）提供"在 Canvas 中打开全文"入口；原文入暂存区按索引取用
     let fullCanvasBtn = '';
