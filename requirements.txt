@@ -15,8 +15,8 @@ pymysql==1.1.1
 # Redis
 redis[hiredis]==5.2.0
 
-# HTTP 客户端（调用 LLM API）
-httpx==0.27.0
+# HTTP 客户端（调用 LLM API）;>=0.27.1 是 mcp 1.26.0 的硬性要求
+httpx==0.27.2
 
 # YAML 解析（岗位包配置）
 pyyaml==6.0.2
