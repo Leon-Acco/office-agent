@@ -53,7 +53,10 @@ if [ "$PROJECT_ROOT" != "$APP_DIR" ]; then
 fi
 
 echo "==> [3/6] 创建 venv 并安装依赖（根 requirements.txt 为权威清单）"
-if [ ! -x "$VENV_DIR/bin/python" ]; then
+# 以 bin/pip 为准判断 venv 完整性:上次 ensurepip 失败的半成品有 bin/python 无 bin/pip,
+# 若按 bin/python 判断会跳过创建后直接调 pip 报错;不完整则清掉重建
+if [ ! -x "$VENV_DIR/bin/pip" ]; then
+    [ -d "$VENV_DIR" ] && rm -rf "$VENV_DIR"
     python3 -m venv "$VENV_DIR"
 fi
 "$VENV_DIR/bin/pip" install --upgrade pip -q
