@@ -61,6 +61,9 @@ class Agent(Base):
     # Harness Engineering：行为准则 + 直绑能力（skill_key 列表，优先于 RolePack.config.skills）
     agents_md: Mapped[str] = mapped_column(Text, default="")
     skills: Mapped[list] = mapped_column(JSON, default=list)
+    # 直绑工具白名单（内置工具名 / MCP Server 名，优先于 RolePack.config.tools）
+    # 空数组 = 回落岗位包 spec.tools；非空 = 仅此列表可用（MCP 须显式列出才注入）
+    tools: Mapped[list] = mapped_column(JSON, default=list)
 
     # 指标
     adoption_rate: Mapped[int] = mapped_column(Integer, default=0)  # 采纳率 %

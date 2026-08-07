@@ -50,6 +50,7 @@ async def ensure_columns():
     required = [
         ("agent", "agents_md", "ALTER TABLE agent ADD COLUMN agents_md TEXT NULL"),
         ("agent", "skills", "ALTER TABLE agent ADD COLUMN skills JSON NULL"),
+        ("agent", "tools", "ALTER TABLE agent ADD COLUMN tools JSON NULL"),
         ("skill", "instructions", "ALTER TABLE skill ADD COLUMN instructions TEXT NULL"),
         ("task_card", "result_doc_path", "ALTER TABLE task_card ADD COLUMN result_doc_path VARCHAR(500) NULL"),
         ("task_assignment", "discussion_note", "ALTER TABLE task_assignment ADD COLUMN discussion_note TEXT NULL"),

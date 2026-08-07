@@ -185,8 +185,12 @@ class ResourceBody(BaseModel):
 
 
 @router.get("/resources")
-async def list_resources(db: AsyncSession = Depends(get_db)):
-    resources = (await db.execute(select(Resource).order_by(Resource.created_at.desc()))).scalars().all()
+async def list_resources(type: str | None = None, db: AsyncSession = Depends(get_db)):
+    # type 过滤（如 ?type=document 只取已上传文档，供员工表单「知识资源」勾选用）
+    stmt = select(Resource).order_by(Resource.created_at.desc())
+    if type:
+        stmt = stmt.where(Resource.type == type)
+    resources = (await db.execute(stmt)).scalars().all()
     if not resources:
         # 如果 Resource 表为空，从 Agent.resources JSON 字段聚合
         agents = (await db.execute(select(Agent))).scalars().all()
@@ -567,21 +571,13 @@ async def list_tools(db: AsyncSession = Depends(get_db)):
              "read_only": t.read_only, "owner": t.owner, "status": t.status} for t in tools]
 
 
-# 内置工具白名单（与 frontdesk._load_role_pack_spec 默认配置保持一致，共 10 个）
-_BUILTIN_TOOL_NAMES = [
-    "searchKnowledge", "getEmployeeInfo", "searchResource", "loadSkill",
-    "searchCode", "getCodeExcerpt", "listFiles", "cloneRepo",
-    "getProjectStructure", "searchInDocs",
-]
-
-
 @router.get("/tools/options")
 async def list_tool_options(db: AsyncSession = Depends(get_db)):
     """
-    岗位包工具白名单的可选项聚合：内置工具 + 已接入的 MCP Server / API 工具
-    运行时按名称匹配：命中内置名 → 内置工具；否则视为 MCP Server 名（见 runtime/context.py）
+    工具勾选项聚合：只列已接入的 MCP Server / API 工具（Tool 表）。
+    内置工具恒定全开、不进勾选项（见 runtime/tools.BUILTIN_TOOL_NAMES 与 runtime/context.py）。
     """
-    options = [{"value": n, "label": f"{n}（内置工具）", "kind": "builtin"} for n in _BUILTIN_TOOL_NAMES]
+    options = []
     tools = (await db.execute(select(Tool).order_by(Tool.created_at.desc()))).scalars().all()
     for t in tools:
         options.append({"value": t.name, "label": f"{t.name}（{t.type or 'mcp'}）", "kind": t.type or "mcp"})
@@ -720,6 +716,7 @@ class AgentBody(BaseModel):
     tags: list = []
     agents_md: str = ""  # AGENTS.md 行为准则（Harness Engineering）
     skills: list = []    # 直绑 skill_key 列表（优先于岗位包配置）
+    tools: list = []     # 直绑工具白名单（内置工具名/MCP Server 名，优先于岗位包配置；空=回落岗位包）
     repo_ids: list = []  # 绑定代码仓库 ID 列表（AgentRepoBinding 同步）
     adoption_rate: int = 0
     session_count: int = 0
@@ -794,6 +791,7 @@ async def list_agents(
             "lifecycle": a.status, "status": a.status,
             "description": a.description,
             "agents_md": a.agents_md, "skills": a.skills or [],
+            "tools": a.tools or [],
             "resources": a.resources or [],
             "repo_ids": agent_repo_ids.get(a.id, []),
             "repo_names": [repo_name_map.get(rid, rid) for rid in agent_repo_ids.get(a.id, [])],
@@ -811,7 +809,7 @@ async def create_agent(body: AgentBody, db: AsyncSession = Depends(get_db)):
         role_pack_id=body.role_pack_id or None,
         status=body.status, version=body.version, owner=body.owner,
         description=body.description, resources=body.resources, tags=body.tags,
-        agents_md=body.agents_md, skills=body.skills,
+        agents_md=body.agents_md, skills=body.skills, tools=body.tools,
         adoption_rate=body.adoption_rate, session_count=body.session_count,
     )
     db.add(a)
@@ -852,6 +850,7 @@ async def update_agent(aid: str, body: AgentBody, db: AsyncSession = Depends(get
     a.description, a.resources, a.tags = body.description, body.resources, body.tags
     # 前端始终全量提交，直接赋值（允许清空 AGENTS.md / 解绑全部能力）
     a.agents_md, a.skills = body.agents_md, body.skills
+    a.tools = body.tools  # 直绑工具白名单：全量提交，空数组=回落岗位包配置
     # 同步仓库绑定（与 skills 同语义：全量提交，空数组 = 解绑全部）
     repo_names = await _sync_repo_bindings(db, a.id, body.repo_ids)
     bind_detail = f"，绑定仓库：{'、'.join(repo_names) if repo_names else '（无）'}"

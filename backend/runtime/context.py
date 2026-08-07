@@ -146,8 +146,12 @@ async def build_context(
         max_token=budget_def.get("token", 48000),
     )
 
-    # 工具白名单
-    allowed_tools = spec.get("tools", [])
+    # 工具白名单语义（2026-08-07 起）：内置工具恒定全开（基础能力，表单不再提供勾选）；
+    # agent.tools / spec.tools 只承载「MCP 外部工具增量白名单」（直绑优先，与 skills 同语义）。
+    # 勾了 MCP 不会再把内置工具关掉；MCP 名由 mcp_client 按名单注入。
+    from backend.runtime.tools import BUILTIN_TOOL_NAMES
+    extra_tools = agent.tools or spec.get("tools", [])
+    allowed_tools = BUILTIN_TOOL_NAMES + [t for t in extra_tools if t not in BUILTIN_TOOL_NAMES]
     # Agent 直绑 skills（skill_key 列表）优先，回退岗位包 spec.skills（历史数据可能是名称）
     allowed_skills = agent.skills or spec.get("skills", [])
     resources = agent.resources or spec.get("resources", [])
@@ -200,12 +204,18 @@ async def build_context(
 
     # 资源中心已上传文档清单（只取名称,prompt 展示用;上限 20 条防膨胀）
     # 失败静默降级为空列表 = 不渲染文档段,不影响主流程
+    # 绑定的知识资源（agent.resources/spec.resources 直绑优先）命中文档名时,
+    # 文档清单收敛到绑定范围;未绑定任何文档 = 全部可见（向后兼容）
     doc_resources: list[str] = []
     try:
         from backend.models.resource import Resource
         doc_resources = (await db.execute(
             select(Resource.name).where(Resource.type == "document").limit(20)
         )).scalars().all()
+        if resources:
+            bound_docs = [n for n in doc_resources if n in set(resources)]
+            if bound_docs:
+                doc_resources = bound_docs
     except Exception:
         pass  # 文档清单加载失败不阻断执行
 
@@ -279,8 +289,11 @@ def build_system_prompt(context: AgentContext) -> str:
         for name in context.doc_resources:
             prompt += f"  - 📄 {name}\n"
     # resources 字符串列表降级为补充展示（不再作为任何逻辑输入）
+    # 已在「已上传文档」段渲染的绑定文档不重复打印
+    shown = set(context.doc_resources)
     for r in context.resources:
-        prompt += f"  - {r}\n"
+        if r not in shown:
+            prompt += f"  - {r}\n"
     if not context.repo_details and not context.doc_resources and not context.resources:
         prompt += "  （未绑定专属资源，可全局检索）\n"
 

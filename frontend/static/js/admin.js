@@ -1131,9 +1131,8 @@ const AdminModule = {
         { name: 'name', label: '岗位名称', type: 'text', value: val('name'), required: true },
         { name: 'version', label: '版本', type: 'text', value: val('version', '1.0.0') },
         { name: 'owner', label: 'Owner', type: 'text', value: val('owner') },
-        // 工具白名单（MCP 权限控制入口）：存 config.tools，运行时按名称匹配内置工具或 MCP Server
-        // 空数组=全部内置工具放开（MCP 不会加载）；非空=仅勾选项可用（MCP 须显式勾选才注入）
-        { name: 'tools', label: '工具白名单（内置工具 + MCP Server；全不勾=仅放开全部内置工具）', type: 'multiselect',
+        // MCP 工具勾选（存 config.tools）：内置工具恒定全开不进选项；勾选=为该岗位包开通对应 MCP Server
+        { name: 'tools', label: 'MCP 工具（勾选开通；内置工具默认全开）', type: 'multiselect',
           value: (item && item.config && Array.isArray(item.config.tools)) ? item.config.tools : [],
           source: '/api/admin/tools/options', valueKey: 'value', labelKey: 'label' },
       ],
@@ -1148,6 +1147,10 @@ const AdminModule = {
         { name: 'description', label: '职责描述', type: 'textarea', value: val('description') },
         // Harness Engineering：直绑能力（skill_key 列表，优先于岗位包配置）+ 行为准则
         { name: 'skills', label: '绑定能力（Skills，直绑优先于岗位包）', type: 'multiselect', value: val('skills', []), source: '/api/admin/skills', valueKey: 'skill_key', labelKey: 'name' },
+        // 直绑 MCP 工具（直绑优先于岗位包）：内置工具恒定全开不进选项；勾选=为该员工开通对应 MCP Server
+        { name: 'tools', label: 'MCP 工具（勾选开通，直绑优先于岗位包；内置工具默认全开）', type: 'multiselect', value: val('tools', []), source: '/api/admin/tools/options', valueKey: 'value', labelKey: 'label' },
+        // 直绑知识资源（资源中心已上传文档）：勾选后该员工可见文档收敛到勾选范围；全不勾=全部文档可见
+        { name: 'resources', label: '知识资源（已上传文档，勾选绑定；全不勾=全部可见）', type: 'multiselect', value: val('resources', []), source: '/api/admin/resources?type=document', valueKey: 'name', labelKey: 'name' },
         // 绑定代码仓库（AgentRepoBinding 同步）：绑定后代码检索工具自动限定在授权仓库范围内
         { name: 'repo_ids', label: '绑定代码仓库（限定代码检索范围，不绑=全局）', type: 'multiselect', value: val('repo_ids', []), source: '/api/gov/repositories', valueKey: 'id', labelKey: 'name' },
         { name: 'agents_md', label: '行为准则（AGENTS.md）', type: 'textarea', value: val('agents_md'), placeholder: 'Markdown 格式：角色边界、输出规范、禁忌事项…' },

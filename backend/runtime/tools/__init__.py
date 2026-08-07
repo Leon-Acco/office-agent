@@ -329,6 +329,16 @@ class LoadSkillTool(Tool):
 #  工具注册工厂：根据岗位包白名单构建 Registry
 # ═══════════════════════════════════════════════
 
+# 内置工具规范清单（与 frontdesk._load_role_pack_spec 默认配置一致，共 10 个）
+# 语义（2026-08-07 起）：内置工具恒定全开，不进勾选表单；
+# agent.tools / spec.tools 只承载「MCP 外部工具增量白名单」（见 runtime/context.py）
+BUILTIN_TOOL_NAMES = [
+    "searchKnowledge", "getEmployeeInfo", "searchResource", "loadSkill",
+    "searchCode", "getCodeExcerpt", "listFiles", "cloneRepo",
+    "getProjectStructure", "searchInDocs",
+]
+
+
 def build_tool_registry(allowed_tools: list[str],
                         allowed_repos: list[str] | None = None,
                         default_repo: str | None = None,
