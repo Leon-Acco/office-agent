@@ -2004,6 +2004,75 @@ button .material-symbols-outlined, .admin-tab .material-symbols-outlined {
   .emp-card-grid { grid-template-columns: 1fr; }
   .employee-grid { grid-template-columns: 1fr; }
 }
+
+/* ========================================
+   使用公告弹窗(快速上手,MD 渲染)
+   ======================================== */
+.ann-modal {
+  position: fixed; inset: 0; z-index: 1200;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(17, 94, 89, 0.18);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.ann-modal.open { display: flex; }
+.ann-card {
+  width: min(640px, calc(100vw - 48px)); max-height: min(78vh, 760px);
+  display: flex; flex-direction: column;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-soft, #E3EEEB); border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(15, 118, 110, 0.16), 0 4px 12px rgba(23, 23, 23, 0.05);
+  overflow: hidden;
+}
+.ann-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 22px; font-size: 16px; font-weight: 700; color: var(--teal-800, #115E59);
+  border-bottom: 1px solid var(--border-soft, #E3EEEB);
+}
+.ann-head .material-symbols-outlined { font-size: 22px; color: var(--teal-600, #0D9488); }
+.ann-close {
+  margin-left: auto; border: none; background: transparent; cursor: pointer;
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; color: #6b7d7a;
+}
+.ann-close:hover { background: var(--teal-50, #E6F7F4); color: var(--teal-700, #0F766E); }
+.ann-body { padding: 8px 26px 18px; overflow-y: auto; font-size: 14.5px; line-height: 1.8; color: #22302e; }
+.ann-body h1 { font-size: 20px; color: var(--teal-800, #115E59); margin: 14px 0 8px; }
+.ann-body h2 {
+  font-size: 16.5px; color: var(--teal-800, #115E59); margin: 22px 0 8px;
+  padding-left: 10px; border-left: 4px solid var(--teal-600, #0D9488);
+}
+.ann-body h3 { font-size: 15px; color: var(--teal-700, #0F766E); margin: 16px 0 6px; }
+.ann-body p { margin: 8px 0; }
+.ann-body ul, .ann-body ol { margin: 8px 0; padding-left: 22px; }
+.ann-body li { margin: 3px 0; }
+.ann-body blockquote {
+  margin: 10px 0; padding: 8px 14px; background: var(--teal-50, #E6F7F4);
+  border-left: 4px solid var(--teal-600, #0D9488); border-radius: 0 10px 10px 0;
+  color: #3d4f4c; font-size: 13.5px;
+}
+.ann-body code {
+  background: var(--teal-50, #E6F7F4); border: 1px solid var(--border-soft, #E3EEEB);
+  border-radius: 6px; padding: 1px 6px; font-size: 12.5px; color: var(--teal-800, #115E59);
+}
+.ann-body hr { border: none; border-top: 1px solid var(--border-soft, #E3EEEB); margin: 18px 0; }
+.ann-body a { color: var(--teal-700, #0F766E); }
+.ann-foot {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 22px; border-top: 1px solid var(--border-soft, #E3EEEB);
+}
+.ann-doc-link {
+  font-size: 13.5px; color: var(--teal-700, #0F766E); text-decoration: none; font-weight: 600;
+}
+.ann-doc-link:hover { text-decoration: underline; }
+.ann-ok {
+  margin-left: auto; border: none; cursor: pointer;
+  padding: 9px 22px; border-radius: 999px; font-size: 14px; font-weight: 600; color: #fff;
+  background: linear-gradient(135deg, var(--teal-600, #0D9488), var(--teal-700, #0F766E));
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.28);
+  transition: transform .15s, box-shadow .15s;
+}
+.ann-ok:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(13, 148, 136, 0.34); }
 </style>
 <!-- highlight.js 语法高亮（代码展示） -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
@@ -2593,6 +2662,16 @@ button .material-symbols-outlined, .admin-tab .material-symbols-outlined {
     </div>
     <!-- 底部用户 -->
     <div class="sidebar-footer">
+      <!-- 文档说明:外链到文档中心(新标签),不参与 SPA 页面切换 -->
+      <a class="nav-item" href="/doc/" target="_blank" rel="noopener">
+        <span class="material-symbols-outlined nav-icon">article</span>
+        <span class="nav-label"><span class="title">文档说明</span></span>
+      </a>
+      <!-- 重开使用公告(快速上手) -->
+      <a class="nav-item" onclick="showAnnouncement(true)">
+        <span class="material-symbols-outlined nav-icon">campaign</span>
+        <span class="nav-label"><span class="title">使用公告</span></span>
+      </a>
       <a class="nav-item" onclick="logout()">
         <span class="material-symbols-outlined nav-icon">logout</span>
         <span class="nav-label"><span class="title">退出登录</span></span>
@@ -3024,6 +3103,24 @@ function toggleLoginPassword(btn) {
 }
 </script>
 
+<!-- 使用公告弹窗:内容取自 /static/announcement.md,登录后自动弹一次,可从侧边栏重开 -->
+<div id="announcement-modal" class="ann-modal" onclick="if(event.target===this)closeAnnouncement(false)">
+  <div class="ann-card">
+    <div class="ann-head">
+      <span class="material-symbols-outlined">campaign</span>
+      <span>使用公告 · 快速上手</span>
+      <button class="ann-close" onclick="closeAnnouncement(false)" title="关闭">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="ann-body"><p style="color:#6b7d7a;">公告加载中…</p></div>
+    <div class="ann-foot">
+      <a class="ann-doc-link" href="/doc/" target="_blank" rel="noopener">查看完整文档</a>
+      <button class="ann-ok" onclick="closeAnnouncement(true)">知道了，不再提示</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast 通知组件（最优先加载，替代原生 alert/confirm） -->
 <script src="/static/js/toast.js?v=4"></script>
 <!-- Three.js(本地化,避免 CDN 不稳定)+ 登录页粒子笑脸 -->
@@ -3032,7 +3129,7 @@ function toggleLoginPassword(btn) {
 <!-- API 集成层：从后端动态加载数据（加版本号防缓存） -->
 <!-- 注意：admin.js 必须在 app.js 之前加载，因为 app.js 的 switchAppPage 依赖 AdminModule -->
 <script src="/static/js/admin.js?v=31"></script>
-<script src="/static/js/app.js?v=37"></script>
+<script src="/static/js/app.js?v=38"></script>
 <script src="/static/js/chat.js?v=30"></script>
 <script src="/static/js/graph.js?v=17"></script>
 

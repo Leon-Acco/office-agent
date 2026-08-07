@@ -105,6 +105,11 @@ FRONTEND_DIR = PROJECT_ROOT / "frontend" / "static"
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
+    # 产品文档页(设计文档 / PRD / 文档中心),目录自带 index.html
+    DOC_DIR = PROJECT_ROOT / "frontend" / "doc"
+    if DOC_DIR.exists():
+        app.mount("/doc", StaticFiles(directory=str(DOC_DIR), html=True), name="doc")
+
     @app.get("/", response_class=HTMLResponse)
     async def serve_index():
         """根路由：返回前端首页"""

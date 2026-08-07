@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Office_Agent 产品文档（PRD）</title>
+<style>
+/* Soft SaaS teal 皮肤：与主应用(tokens)同色系；正文与手绘图表内容不变 */
+:root{--ink:#22302e;--muted:#6b7d7a;--teal-600:#0D9488;--teal-700:#0F766E;--teal-800:#115E59;
+  --teal-50:#E6F7F4;--bg:#F4F8F7;--card:#ffffff;--line:#E3EEEB;--accent:#0F766E;
+  --shadow:0 8px 24px rgba(15,118,110,.07),0 2px 6px rgba(23,23,23,.03);}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Segoe UI","PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+  font-size:16px;line-height:1.85;}
+.layout{display:flex;align-items:flex-start;max-width:1560px;margin:0 auto;}
+.toc{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;width:272px;flex:0 0 272px;
+  margin:16px 0 16px 16px;padding:22px 14px 40px;background:var(--card);border:1px solid var(--line);
+  border-radius:18px;box-shadow:var(--shadow);font-size:13.5px;line-height:1.6;}
+.toc-title{font-size:15px;font-weight:700;margin:0 6px 12px;color:var(--teal-800);letter-spacing:1px}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc li{margin:2px 0}
+.toc li.lv3{padding-left:14px;font-size:12.5px;opacity:.8}
+.toc a{color:#4a5c59;text-decoration:none;display:block;padding:3px 8px;border-radius:8px}
+.toc a:hover{background:var(--teal-50);color:var(--teal-700)}
+main{flex:1;min-width:0;margin:16px;padding:46px 52px 64px;background:var(--card);
+  border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);}
+.back-home{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--teal-700);
+  text-decoration:none;margin-bottom:24px;padding:5px 14px;border:1px solid var(--line);
+  border-radius:999px;background:var(--teal-50);transition:background .15s}
+.back-home:hover{background:#D3EEE8}
+h1{font-size:32px;margin:0 0 6px;letter-spacing:.5px;color:var(--teal-800)}
+.subtitle{color:var(--muted);font-size:14px;margin-bottom:18px}
+.author-card{display:flex;align-items:center;gap:14px;margin:20px 0 10px;padding:14px 18px;max-width:540px;
+  background:linear-gradient(135deg,var(--teal-50),#F2FAF8);border:1px solid var(--line);border-radius:16px}
+.author-avatar{width:44px;height:44px;flex:0 0 44px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;color:#fff;font-size:19px;font-weight:700;
+  background:linear-gradient(135deg,var(--teal-600),var(--teal-800));box-shadow:0 4px 10px rgba(13,148,136,.28)}
+.author-name{font-weight:700;font-size:15.5px;color:var(--ink)}
+.author-meta{font-size:12.5px;color:var(--muted)}
+h2{font-size:24px;margin:52px 0 14px;padding:0 0 10px 14px;color:var(--teal-800);
+  border-bottom:1px solid var(--line);border-left:5px solid var(--teal-600)}
+h3{font-size:19px;margin:34px 0 10px;color:var(--teal-700)}
+h4{font-size:16.5px;margin:24px 0 8px;color:#334340}
+p{margin:12px 0}
+ul,ol{margin:12px 0;padding-left:26px}
+li{margin:5px 0}
+a{color:var(--teal-700)}
+code{background:var(--teal-50);border:1px solid var(--line);border-radius:6px;padding:1px 6px;
+  font-size:13.5px;color:var(--teal-800);
+  font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+pre.code{background:#12332F;color:#D9F2EC;padding:18px 20px;border-radius:14px;overflow:auto;
+  font-size:13px;line-height:1.6;box-shadow:var(--shadow)}
+pre.code code{background:none;border:none;color:inherit;padding:0}
+blockquote{margin:18px 0;padding:14px 18px;background:var(--teal-50);border-left:4px solid var(--teal-600);
+  border-radius:0 12px 12px 0;color:#3d4f4c;font-size:14.5px}
+hr{border:none;border-top:1px solid var(--line);margin:44px 0}
+.callout{display:flex;gap:14px;background:#F0FAF7;border:1px solid #BFE6DE;border-radius:14px;
+  padding:16px 18px;margin:20px 0;box-shadow:var(--shadow)}
+.callout-icon{font-size:22px;line-height:1.3}
+.callout-body p{margin:4px 0}
+.callout-body ul{margin:6px 0}
+.table-wrap{overflow-x:auto;margin:20px 0;border-radius:14px;box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14px;background:#fff;
+  border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.65}
+th{background:var(--teal-50);font-weight:600;color:var(--teal-800)}
+tr:nth-child(even) td{background:#F7FBFA}
+figure.diagram{position:relative;margin:28px 0;padding:20px 16px 26px;background:#fff;
+  border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow-x:auto}
+figure.diagram.zoomed{overflow-x:auto}
+.hd-svg{display:block;margin:0 auto}
+.zoom-btn{position:absolute;right:12px;bottom:8px;font-size:12px;color:var(--teal-700);background:var(--teal-50);
+  border:1px solid #BFE6DE;border-radius:999px;padding:2px 12px;cursor:pointer;font-family:inherit}
+.zoom-btn:hover{background:#D3EEE8}
+.hd-text{font-family:"Comic Sans MS","Segoe Print","Noto Sans SC","PingFang SC",sans-serif}
+.doc-footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12.5px;color:var(--muted)}
+.doc-footer a{color:var(--teal-700);text-decoration:none}
+.doc-footer a:hover{text-decoration:underline}
+@media(max-width:1000px){.toc{display:none}main{margin:10px;padding:28px 20px 60px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc"><div class="toc-title">目录</div><ul><li class="lv2"><a href="#一-产品是什么">一、产品是什么</a></li><li class="lv3"><a href="#1-1-整体产品架构">1.1 整体产品架构</a></li><li class="lv2"><a href="#二-要解决什么问题">二、要解决什么问题</a></li><li class="lv2"><a href="#三-目标用户与典型场景">三、目标用户与典型场景</a></li><li class="lv2"><a href="#四-功能能力清单">四、功能能力清单</a></li><li class="lv3"><a href="#4-1-七大功能页面">4.1 七大功能页面</a></li><li class="lv3"><a href="#4-2-一次提问的完整链路">4.2 一次提问的完整链路</a></li><li class="lv3"><a href="#4-3-AI-员工的五部分装配">4.3 AI 员工的五部分装配</a></li><li class="lv3"><a href="#4-4-内置工具能力">4.4 内置工具能力</a></li><li class="lv3"><a href="#4-5-协作会议室">4.5 协作会议室</a></li><li class="lv3"><a href="#4-6-治理与安全能力">4.6 治理与安全能力</a></li><li class="lv2"><a href="#五-产品价值总结">五、产品价值总结</a></li><li class="lv2"><a href="#六-当前边界与已知限制">六、当前边界与已知限制</a></li><li class="lv2"><a href="#七-下一步产品建议">七、计划</a></li></ul></nav>
+<main>
+<a class="back-home" href="/doc/">← 返回文档中心</a>
+<h1>🏢 Office_Agent 产品文档（PRD）</h1>
+<div class="author-card">
+  <div class="author-avatar">张</div>
+  <div>
+    <div class="author-name">张朝</div>
+    <div class="author-meta">作者 · 产品方案 · 2026-08</div>
+  </div>
+</div>
+<p>本文档说明项目定位、要解决的问题、已实现的能力与当前边界。技术实现细节见配套的设计文档。</p>
+
+<h2 id="一-产品是什么">一、产品是什么</h2>
+<p><strong>Office_Agent 是一个「多 Agent 虚拟办公室」</strong>：把一家公司的组织结构搬进浏览器，用 AI 员工承接「找人问」这个过程。</p>
+<p>产品的核心隐喻是<strong>组织，而不是聊天框</strong>。</p>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;TB&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;C&quot;, &quot;label&quot;: &quot;公司 Company&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;D1&quot;, &quot;label&quot;: &quot;研发部&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;D2&quot;, &quot;label&quot;: &quot;产品部&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;M1&quot;, &quot;label&quot;: &quot;后端域&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;M2&quot;, &quot;label&quot;: &quot;前端域&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;M3&quot;, &quot;label&quot;: &quot;测试域&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;M4&quot;, &quot;label&quot;: &quot;架构域&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;A1&quot;, &quot;label&quot;: &quot;AI 员工\n绑定：代码仓库 + 知识库\n技能包 + 工具白名单&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;A2&quot;, &quot;label&quot;: &quot;AI 员工&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;A3&quot;, &quot;label&quot;: &quot;AI 员工&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;A4&quot;, &quot;label&quot;: &quot;AI 员工&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;C&quot;, &quot;to&quot;: &quot;D1&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;C&quot;, &quot;to&quot;: &quot;D2&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;D1&quot;, &quot;to&quot;: &quot;M1&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;D1&quot;, &quot;to&quot;: &quot;M2&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;D1&quot;, &quot;to&quot;: &quot;M3&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;D2&quot;, &quot;to&quot;: &quot;M4&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;M1&quot;, &quot;to&quot;: &quot;A1&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;M2&quot;, &quot;to&quot;: &quot;A2&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;M3&quot;, &quot;to&quot;: &quot;A3&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;M4&quot;, &quot;to&quot;: &quot;A4&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}], &quot;groups&quot;: [], &quot;seed&quot;: 20}"></div></figure>
+<p>用户不需要知道「该问谁」，像在真实公司里那样走到<strong>总前台</strong>提问即可，系统自动分诊到对口的 AI 员工；跨领域的复杂问题进入<strong>协作会议室</strong>，由多个 AI 员工并行产出、互评、合成一份完整方案。</p>
+<h3 id="1-1-整体产品架构">1.1 整体产品架构</h3>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;TB&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;P1&quot;, &quot;label&quot;: &quot;公司总览&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;P2&quot;, &quot;label&quot;: &quot;总前台&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;P3&quot;, &quot;label&quot;: &quot;员工办公室&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;P4&quot;, &quot;label&quot;: &quot;协作会议室&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;P5&quot;, &quot;label&quot;: &quot;关系图谱&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;P6&quot;, &quot;label&quot;: &quot;资源中心&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;P7&quot;, &quot;label&quot;: &quot;管理与治理&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R1&quot;, &quot;label&quot;: &quot;三级分诊&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R2&quot;, &quot;label&quot;: &quot;ReAct 执行循环&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R3&quot;, &quot;label&quot;: &quot;预算控制\n步数/调用/超时/Token&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R4&quot;, &quot;label&quot;: &quot;安全钩子\n注入检测 + 结果脱敏&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;T1&quot;, &quot;label&quot;: &quot;业务检索工具&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;T2&quot;, &quot;label&quot;: &quot;代码理解工具&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;T3&quot;, &quot;label&quot;: &quot;MCP 外部工具&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S1&quot;, &quot;label&quot;: &quot;已审核知识库&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S2&quot;, &quot;label&quot;: &quot;Git 仓库工作区&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S3&quot;, &quot;label&quot;: &quot;岗位包 / 技能 / 策略&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S4&quot;, &quot;label&quot;: &quot;审计日志&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;UI&quot;, &quot;to&quot;: &quot;CORE&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;CORE&quot;, &quot;to&quot;: &quot;TOOLS&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;TOOLS&quot;, &quot;to&quot;: &quot;DATA&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;CORE&quot;, &quot;to&quot;: &quot;S4&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}], &quot;groups&quot;: [{&quot;id&quot;: &quot;UI&quot;, &quot;label&quot;: &quot;前端 · 七大页面&quot;, &quot;members&quot;: [&quot;P1&quot;, &quot;P2&quot;, &quot;P3&quot;, &quot;P4&quot;, &quot;P5&quot;, &quot;P6&quot;, &quot;P7&quot;]}, {&quot;id&quot;: &quot;CORE&quot;, &quot;label&quot;: &quot;Agent 运行时&quot;, &quot;members&quot;: [&quot;R1&quot;, &quot;R2&quot;, &quot;R3&quot;, &quot;R4&quot;]}, {&quot;id&quot;: &quot;TOOLS&quot;, &quot;label&quot;: &quot;工具层&quot;, &quot;members&quot;: [&quot;T1&quot;, &quot;T2&quot;, &quot;T3&quot;]}, {&quot;id&quot;: &quot;DATA&quot;, &quot;label&quot;: &quot;数据与资产&quot;, &quot;members&quot;: [&quot;S1&quot;, &quot;S2&quot;, &quot;S3&quot;, &quot;S4&quot;]}], &quot;seed&quot;: 33}"></div></figure>
+<hr>
+<h2 id="二-要解决什么问题">二、要解决什么问题</h2>
+<div class="callout"><div class="callout-icon">🎯</div><div class="callout-body"><p>企业知识散落在代码仓库、文档和资深员工的经验里。通用 AI 助手不了解具体代码库与业务规范，答案不可信；而一个大而全的「企业助手」又容易因为上下文过载、权限不清、责任无人承担而失控。Office_Agent 走的是第三条路：<strong>按组织切分责任与边界</strong>。</p></div></div>
+<div class="table-wrap"><table><tr><th>现实痛点</th><th>传统做法的局限</th><th>Office_Agent 的解法</th></tr><tr><td>新人不知道该问谁、资深员工被反复打扰</td><td>靠 IM 群里 @ 人，响应慢、重复劳动</td><td>总前台三级分诊，自动路由到对口领域员工</td></tr><tr><td>通用 AI 不懂自家代码与业务</td><td>只能给通用答案，容易一本正经胡说</td><td>员工绑定具体 Git 仓库 + 已审核知识库，强制「先查后答」</td></tr><tr><td>单一助手上下文爆炸、能力边界模糊</td><td>一个 prompt 塞满全公司知识，效果反而变差</td><td>按领域切分员工，每个员工只挂自己的仓库/知识/技能/工具</td></tr><tr><td>AI 乱调工具、越权访问、泄露密钥</td><td>无审计、无边界</td><td>岗位包工具白名单 + 只读模式 + 注入防护 + 结果脱敏 + 审计日志</td></tr><tr><td>跨部门问题没人能一次答全</td><td>需要拉会、串行沟通</td><td>协作会议室：并行草案 → 互评 → 合成方案，冲突显式标注</td></tr><tr><td>AI 答案无来源、无法沉淀</td><td>一次性对话，知识不复用</td><td>知识候选审核状态机，审核通过才进检索</td></tr><tr><td>AI 配置随意改、上线无管控</td><td>改 prompt 就上线，出事无法回滚</td><td>岗位包版本状态机 + 变更审批单 + 灰度发布 + 回滚</td></tr></table></div>
+<hr>
+<h2 id="三-目标用户与典型场景">三、目标用户与典型场景</h2>
+<div class="table-wrap"><table><tr><th>角色</th><th>典型诉求</th><th>用到的功能</th></tr><tr><td>研发工程师</td><td>「这个接口在哪实现的？幂等怎么做的？」</td><td>总前台单聊 → 后端域员工 → 代码检索工具</td></tr><tr><td>新入职员工</td><td>「公司有哪些系统？谁负责什么？」</td><td>总前台自答 + 员工信息检索 + 关系图谱</td></tr><tr><td>产品/项目经理</td><td>「做一个新功能，各端要出什么方案？」</td><td>协作会议室多员工并行产出 + 合成方案</td></tr><tr><td>技术负责人</td><td>「AI 员工都能干什么？谁改了配置？」</td><td>管理与治理后台 + 审计日志 + 岗位包版本</td></tr><tr><td>知识管理者</td><td>「把这次结论沉淀成公司知识」</td><td>知识候选提交与审核流</td></tr></table></div>
+<hr>
+<h2 id="四-功能能力清单">四、功能能力清单</h2>
+<h3 id="4-1-七大功能页面">4.1 七大功能页面</h3>
+<div class="table-wrap"><table><tr><th>页面</th><th>核心能力</th><th>关键设计</th></tr><tr><td><strong>公司总览</strong></td><td>组织 KPI、部门分布、员工状态仪表盘</td><td>采纳率来自用户对回答的真实点赞/点踩</td></tr><tr><td><strong>总前台</strong></td><td>群聊式入口，三级分诊链，SSE 流式输出</td><td>关键词命中 → 仓库名直路由 → LLM 分诊</td></tr><tr><td><strong>员工办公室</strong></td><td>员工列表与单聊，绕过分诊直连指定员工</td><td>指定 agent_id 直路由</td></tr><tr><td><strong>协作会议室</strong></td><td>多员工并行产出 → 两轮互评 → 会议纪要合成</td><td>成果落盘 <code>workspaces/collab_docs/</code></td></tr><tr><td><strong>关系图谱</strong></td><td>公司→部门→领域→员工四环圈层可视化</td><td>点阵网格底，组织一目了然</td></tr><tr><td><strong>资源中心</strong></td><td>文档资源 + 代码仓库双卡</td><td>仓库支持 clone / 浏览 / 搜索 / 分支切换 / 编辑 / 定时拉取</td></tr><tr><td><strong>管理与治理</strong></td><td>组织、员工、技能、工具、角色包、仓库绑定管理</td><td>变更审批、策略中心、审计日志</td></tr></table></div>
+<h3 id="4-2-一次提问的完整链路">4.2 一次提问的完整链路</h3>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;TB&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;Q&quot;, &quot;label&quot;: &quot;用户在总前台提问&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;L1&quot;, &quot;label&quot;: &quot;关键词命中\n领域词表？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;AG&quot;, &quot;label&quot;: &quot;路由到领域员工&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;L2&quot;, &quot;label&quot;: &quot;提到具体\n仓库名？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;L3&quot;, &quot;label&quot;: &quot;LLM 分诊\n输出 agent + 置信度&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;CTX&quot;, &quot;label&quot;: &quot;装配上下文\n身份 + AGENTS.md + 技能摘要 + 工具白名单&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;RE&quot;, &quot;label&quot;: &quot;ReAct 循环\n思考 → 调工具 → 观察&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;TOOL&quot;, &quot;label&quot;: &quot;检索知识库 / 检索代码 / MCP 工具&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;FIN&quot;, &quot;label&quot;: &quot;收敛成答&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;SSE&quot;, &quot;label&quot;: &quot;SSE 流式返回 + 审计落库&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;COL&quot;, &quot;label&quot;: &quot;跨领域？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;ROOM&quot;, &quot;label&quot;: &quot;建议转协作会议室&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;Q&quot;, &quot;to&quot;: &quot;L1&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L1&quot;, &quot;to&quot;: &quot;AG&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;命中&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L1&quot;, &quot;to&quot;: &quot;L2&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;未命中&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L2&quot;, &quot;to&quot;: &quot;AG&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;命中&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L2&quot;, &quot;to&quot;: &quot;L3&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;未命中&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L3&quot;, &quot;to&quot;: &quot;AG&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;AG&quot;, &quot;to&quot;: &quot;CTX&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;CTX&quot;, &quot;to&quot;: &quot;RE&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;RE&quot;, &quot;to&quot;: &quot;TOOL&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;TOOL&quot;, &quot;to&quot;: &quot;RE&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;RE&quot;, &quot;to&quot;: &quot;FIN&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;FIN&quot;, &quot;to&quot;: &quot;SSE&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;SSE&quot;, &quot;to&quot;: &quot;COL&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;COL&quot;, &quot;to&quot;: &quot;ROOM&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}], &quot;groups&quot;: [], &quot;seed&quot;: 46}"></div></figure>
+<h3 id="4-3-AI-员工的五部分装配">4.3 AI 员工的五部分装配</h3>
+<p>员工能力全部在后台配置，不需要改代码：</p>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;LR&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;E&quot;, &quot;label&quot;: &quot;一个 AI 员工&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;I&quot;, &quot;label&quot;: &quot;身份\n姓名 / 职位 / 部门 / 领域&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;A&quot;, &quot;label&quot;: &quot;行为准则\nAGENTS.md&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S&quot;, &quot;label&quot;: &quot;技能包 Skills\nprompt 内只放摘要&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R&quot;, &quot;label&quot;: &quot;资源绑定\nGit 仓库 / 文档 / 知识领域&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;P&quot;, &quot;label&quot;: &quot;岗位包 RolePack\n工具白名单 + 只读 + 预算&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;E&quot;, &quot;to&quot;: &quot;I&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;E&quot;, &quot;to&quot;: &quot;A&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;E&quot;, &quot;to&quot;: &quot;S&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;E&quot;, &quot;to&quot;: &quot;R&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;E&quot;, &quot;to&quot;: &quot;P&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}], &quot;groups&quot;: [], &quot;seed&quot;: 59}"></div></figure>
+<ol>
+<li><strong>身份</strong>：姓名、职位、Emoji、所属部门与领域、职责描述</li>
+<li><strong>行为准则（AGENTS.md）</strong>：员工级人格与边界指令</li>
+<li><strong>技能包（Skills）</strong>：可复用的执行规范；prompt 里只放摘要，需要时由 AI 调 <code>loadSkill</code> 取全文</li>
+<li><strong>资源绑定</strong>：绑定的 Git 仓库（检索自动限定在该范围）、已上传文档、知识库领域</li>
+<li><strong>岗位包（RolePack）</strong>：工具白名单 + 只读权限 + 执行预算（步数/调用数/超时/Token）</li>
+</ol>
+<h3 id="4-4-内置工具能力">4.4 内置工具能力</h3>
+<div class="table-wrap"><table><tr><th>类别</th><th>工具</th><th>用途</th></tr><tr><td>业务检索</td><td><code>searchKnowledge</code></td><td>检索已审核知识库，默认按员工所属领域过滤</td></tr><tr><td>业务检索</td><td><code>getEmployeeInfo</code></td><td>查「谁负责什么」</td></tr><tr><td>业务检索</td><td><code>searchResource</code></td><td>检索资源中心，文档类命中后直接返回正文</td></tr><tr><td>能力加载</td><td><code>loadSkill</code></td><td>按需加载技能完整指令</td></tr><tr><td>代码理解</td><td><code>searchCode</code> / <code>getCodeExcerpt</code> / <code>listFiles</code></td><td>关键词检索、读片段、列结构</td></tr><tr><td>代码理解</td><td><code>getProjectStructure</code> / <code>searchInDocs</code></td><td>项目结构概览、仓库文档检索</td></tr><tr><td>代码接入</td><td><code>cloneRepo</code></td><td>给定 Git 地址即可拉库并检索</td></tr><tr><td>外部扩展</td><td><strong>MCP Server</strong></td><td>接入任意外部 MCP 工具集，接入即生效、无需改代码</td></tr></table></div>
+<h3 id="4-5-协作会议室">4.5 协作会议室</h3>
+<div class="callout"><div class="callout-icon">🤝</div><div class="callout-body"><p>设计目标不是「多个 AI 各说各话」，而是模拟一场真实的评审会：<strong>不追求共识，而是保留分歧</strong>。</p></div></div>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;sequence&quot;, &quot;participants&quot;: [{&quot;id&quot;: &quot;U&quot;, &quot;label&quot;: &quot;用户&quot;}, {&quot;id&quot;: &quot;O&quot;, &quot;label&quot;: &quot;协调器&quot;}, {&quot;id&quot;: &quot;A&quot;, &quot;label&quot;: &quot;后端域员工&quot;}, {&quot;id&quot;: &quot;B&quot;, &quot;label&quot;: &quot;前端域员工&quot;}, {&quot;id&quot;: &quot;C&quot;, &quot;label&quot;: &quot;汇总员&quot;}], &quot;messages&quot;: [{&quot;fromIdx&quot;: 0, &quot;toIdx&quot;: 1, &quot;dashed&quot;: false, &quot;text&quot;: &quot;提交跨领域任务&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 1, &quot;dashed&quot;: false, &quot;text&quot;: &quot;LLM 拆解为 2-5 个子任务并指派&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 2, &quot;dashed&quot;: false, &quot;text&quot;: &quot;子任务 A&quot;, &quot;note&quot;: &quot;第 1 轮 · 草案（时间预算 55%）&quot;}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 3, &quot;dashed&quot;: false, &quot;text&quot;: &quot;子任务 B&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 2, &quot;toIdx&quot;: 1, &quot;dashed&quot;: true, &quot;text&quot;: &quot;草案 A&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 3, &quot;toIdx&quot;: 1, &quot;dashed&quot;: true, &quot;text&quot;: &quot;草案 B&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 2, &quot;dashed&quot;: false, &quot;text&quot;: &quot;全部草案可见，请指出疏漏与冲突&quot;, &quot;note&quot;: &quot;第 2 轮 · 互评（时间预算 35%）&quot;}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 3, &quot;dashed&quot;: false, &quot;text&quot;: &quot;全部草案可见，请指出疏漏与冲突&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 2, &quot;toIdx&quot;: 1, &quot;dashed&quot;: true, &quot;text&quot;: &quot;评审意见 A&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 3, &quot;toIdx&quot;: 1, &quot;dashed&quot;: true, &quot;text&quot;: &quot;评审意见 B&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 4, &quot;dashed&quot;: false, &quot;text&quot;: &quot;合成（保底 90 秒）&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 4, &quot;toIdx&quot;: 0, &quot;dashed&quot;: true, &quot;text&quot;: &quot;六章节方案 + 分歧点逐条标注&quot;, &quot;note&quot;: null}], &quot;seed&quot;: 72}"></div></figure>
+<p>合成文档固定六个章节：任务背景与目标 / 总体方案 / 各部门要点与衔接 / <strong>分歧点与裁决</strong> / 风险与待确认 / 行动清单与分工。任务卡首行以 ✅ 或 ⚠️ 标记是否存在未解决冲突。</p>
+<p>时间预算自动切分，任何一环超时都有兜底：草案保留、状态回退、代码拼接生成汇编版方案。</p>
+<h3 id="4-6-治理与安全能力">4.6 治理与安全能力</h3>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;LR&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;G1&quot;, &quot;label&quot;: &quot;岗位包版本状态机\nDRAFT → IN_REVIEW → CANARY\n→ RELEASED → RETIRED&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;G2&quot;, &quot;label&quot;: &quot;变更审批\n单人 / 双人 / 法定人数&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;G3&quot;, &quot;label&quot;: &quot;策略中心\nACL / 脱敏 / 预算 / 工具风险&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R1&quot;, &quot;label&quot;: &quot;工具白名单&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R2&quot;, &quot;label&quot;: &quot;仓库作用域收敛&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R3&quot;, &quot;label&quot;: &quot;执行预算上限&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R4&quot;, &quot;label&quot;: &quot;注入检测 + 结果脱敏&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;A1&quot;, &quot;label&quot;: &quot;审计日志&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;A2&quot;, &quot;label&quot;: &quot;知识审核流\n只有 APPROVED 参与检索&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;GOV&quot;, &quot;to&quot;: &quot;RUN&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;RUN&quot;, &quot;to&quot;: &quot;AUD&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}], &quot;groups&quot;: [{&quot;id&quot;: &quot;GOV&quot;, &quot;label&quot;: &quot;上线前治理&quot;, &quot;members&quot;: [&quot;G1&quot;, &quot;G2&quot;, &quot;G3&quot;]}, {&quot;id&quot;: &quot;RUN&quot;, &quot;label&quot;: &quot;运行时防护&quot;, &quot;members&quot;: [&quot;R1&quot;, &quot;R2&quot;, &quot;R3&quot;, &quot;R4&quot;]}, {&quot;id&quot;: &quot;AUD&quot;, &quot;label&quot;: &quot;事后追溯&quot;, &quot;members&quot;: [&quot;A1&quot;, &quot;A2&quot;]}], &quot;seed&quot;: 85}"></div></figure>
+<div class="table-wrap"><table><tr><th>能力</th><th>说明</th></tr><tr><td>岗位包版本状态机</td><td>DRAFT → IN_REVIEW → CANARY → RELEASED → RETIRED，支持灰度百分比与回滚</td></tr><tr><td>变更审批引擎</td><td>单人 / 双人 / 法定人数三种审批策略，覆盖岗位包、工具、技能、策略、知识</td></tr><tr><td>策略中心</td><td>ACL / 脱敏 / 预算 / 工具风险四类规则，版本化可回溯</td></tr><tr><td>治理角色</td><td>平台管理员、岗位包 Owner、知识审核员、安全审核员、审计员</td></tr><tr><td>知识审核流</td><td>SUBMITTED → IN_REVIEW → APPROVED / REJECTED → EXPIRED，只有 APPROVED 参与检索</td></tr><tr><td>运行时防护</td><td>参数注入检测、结果脱敏（password/token/key 等）、审计日志</td></tr><tr><td>执行预算</td><td>每次对话限制推理步数、工具调用次数、超时与 Token</td></tr></table></div>
+<p>需要说明的是，注入检测目前是英文关键词黑名单，不应被视为安全边界，其主要价值是审计留痕。真正的边界是工具白名单与仓库作用域——它们在代码执行层生效，不依赖模型自觉。</p>
+<hr>
+<h2 id="五-产品价值总结">五、产品价值总结</h2>
+<div class="table-wrap"><table><tr><th>维度</th><th>价值</th></tr><tr><td><strong>效率</strong></td><td>问题自动路由，无需人工找人；原本要拉会讨论的跨部门问题，一次任务即可拿到一份带分歧标注的初稿</td></tr><tr><td><strong>可信</strong></td><td>强制先查后答，答案基于真实代码与已审核知识；查不到时明确回复「未找到」</td></tr><tr><td><strong>可控</strong></td><td>工具白名单 + 只读模式 + 预算上限 + 审计日志，AI 的能力边界由配置决定</td></tr><tr><td><strong>可演进</strong></td><td>新增一个员工 = 后台配置（选领域、绑仓库、挂技能、配工具），不需要发版</td></tr><tr><td><strong>可沉淀</strong></td><td>对话结论可提交为知识候选，审核后成为全公司可检索资产</td></tr></table></div>
+<hr>
+<h2 id="六-当前边界与已知限制">六、当前边界与已知限制</h2>
+<div class="callout"><div class="callout-icon">⚠️</div><div class="callout-body"><p>以下为对当前代码快照的客观盘点，直接影响能否投入生产。</p></div></div>
+<ol>
+<li><strong>检索是关键词匹配，不是向量语义检索</strong>。知识库检索为「先取最近 5 条 → 再做子串过滤」，代码检索为逐行 grep。其中「先取 5 条再过滤」属于逻辑顺序缺陷而非取舍，会导致超出 5 条范围的知识永远无法召回，是优先级最高的修复项。</li>
+<li><strong>无用户体系</strong>。会话统一挂在 <code>guest</code> 用户下，登录与多租户尚未落地，治理角色也未落到具体人头。</li>
+<li><strong>配置默认值含明文凭据</strong>。<code>config.py</code> 中 MySQL / Redis / LLM Key 存在硬编码默认值，且仓库公开，这三项应视为已泄露，需轮换并改为强制环境变量注入。</li>
+<li><strong>强依赖单一模型</strong>。默认智谱 GLM-5.2（Anthropic 兼容端点），并发闸默认仅 2。低并发是为规避限流的主动选择，但同时制约了协作会议室的真实并行度。</li>
+<li><strong>仓库存放于本机文件系统</strong>。Git 仓库 clone 到 <code>workspaces/</code>，横向扩容需共享存储；部分 git 命令为同步调用，会阻塞事件循环。</li>
+<li><strong>前端为无构建原生 SPA</strong>。修改 JS 需手动 bump <code>?v=N</code> 破坏缓存；项目回滚依赖 <code>.bak</code> 备份链而非 Git。</li>
+</ol>
+<hr>
+<h2 id="七-下一步产品建议">七、计划</h2>
+<ol>
+<li>修复知识检索的过滤顺序，并引入向量检索做混合召回（对答案质量提升最大）</li>
+<li>补齐用户体系与按人的 ACL，使「只读 / 可写」真正落到具体账号</li>
+<li>将「对话结论一键提交为知识候选」做成前台按钮，闭环知识沉淀</li>
+<li>协作会议室增加实时进度流（当前为轮询），使评审过程可观测</li>
+<li>将采纳率、工具命中率、分诊准确率做成可观测看板，驱动员工配置迭代</li>
+</ol>
+<footer class="doc-footer">
+  <span>Office_Agent 产品文档（PRD）· 作者 张朝</span>
+  <span><a href="/doc/">文档中心</a> · <a href="/doc/office_agent_design.html">设计文档</a> · <a href="/">返回应用</a></span>
+</footer>
+</main>
+</div>
+<script>/* Excalidraw-style hand-drawn diagram renderer (offline, zero dependencies) */
+(function () {
+  var PALETTE = ['#ffec99', '#b2f2bb', '#a5d8ff', '#ffc9c9', '#d0bfff', '#ffd8a8', '#c5f6fa', '#e9fac8'];
+  var STROKE = '#1e1e1e';
+  var FS = 15;
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function Sketch(seed) { this.r = mulberry32(seed || 7); }
+  Sketch.prototype.j = function (m) { return (this.r() * 2 - 1) * m; };
+
+  function el(name, attrs) {
+    var e = document.createElementNS('http://www.w3.org/2000/svg', name);
+    for (var k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function sketchLine(s, x1, y1, x2, y2, w) {
+    w = w || 1.6;
+    var g = document.createDocumentFragment();
+    for (var p = 0; p < 2; p++) {
+      var mx = (x1 + x2) / 2 + s.j(1.8), my = (y1 + y2) / 2 + s.j(1.8);
+      var d = 'M' + (x1 + s.j(1.1)) + ',' + (y1 + s.j(1.1)) +
+        ' Q' + mx + ',' + my + ' ' + (x2 + s.j(1.1)) + ',' + (y2 + s.j(1.1));
+      g.appendChild(el('path', { d: d, fill: 'none', stroke: STROKE, 'stroke-width': w - p * 0.5, 'stroke-linecap': 'round', opacity: p ? 0.5 : 1 }));
+    }
+    return g;
+  }
+
+  function roundRectPath(x, y, w, h, r, s, jit) {
+    jit = jit === undefined ? 1.3 : jit;
+    function p(a, b) { return (a + s.j(jit)).toFixed(1) + ',' + (b + s.j(jit)).toFixed(1); }
+    return 'M' + p(x + r, y) + ' L' + p(x + w - r, y) + ' Q' + p(x + w, y) + ' ' + p(x + w, y + r) +
+      ' L' + p(x + w, y + h - r) + ' Q' + p(x + w, y + h) + ' ' + p(x + w - r, y + h) +
+      ' L' + p(x + r, y + h) + ' Q' + p(x, y + h) + ' ' + p(x, y + h - r) +
+      ' L' + p(x, y + r) + ' Q' + p(x, y) + ' ' + p(x + r, y) + ' Z';
+  }
+  function diamondPath(x, y, w, h, s) {
+    function p(a, b) { return (a + s.j(1.5)).toFixed(1) + ',' + (b + s.j(1.5)).toFixed(1); }
+    return 'M' + p(x + w / 2, y) + ' L' + p(x + w, y + h / 2) + ' L' + p(x + w / 2, y + h) + ' L' + p(x, y + h / 2) + ' Z';
+  }
+
+  function shape(s, node) {
+    var g = el('g', {});
+    var d;
+    if (node.shape === 'diamond') d = diamondPath(node.x, node.y, node.w, node.h, s);
+    else if (node.shape === 'stadium') d = roundRectPath(node.x, node.y, node.w, node.h, node.h / 2, s);
+    else d = roundRectPath(node.x, node.y, node.w, node.h, 9, s);
+    var d2 = node.shape === 'diamond' ? diamondPath(node.x, node.y, node.w, node.h, s)
+      : roundRectPath(node.x, node.y, node.w, node.h, node.shape === 'stadium' ? node.h / 2 : 9, s);
+    g.appendChild(el('path', { d: d, fill: node.fill || '#fff', stroke: 'none', opacity: 0.9 }));
+    g.appendChild(el('path', { d: d, fill: 'none', stroke: STROKE, 'stroke-width': 1.9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    g.appendChild(el('path', { d: d2, fill: 'none', stroke: STROKE, 'stroke-width': 1.0, 'stroke-linecap': 'round', opacity: 0.45 }));
+    return g;
+  }
+
+  function arrowHead(s, x, y, angle) {
+    var g = document.createDocumentFragment(), len = 12;
+    for (var i = -1; i <= 1; i += 2) {
+      var a = angle + Math.PI + i * 0.42;
+      g.appendChild(sketchLine(s, x, y, x + Math.cos(a) * len, y + Math.sin(a) * len, 1.7));
+    }
+    return g;
+  }
+
+  function textBlock(lines, cx, cy, size, anchor) {
+    var g = el('g', {}), lh = size * 1.4;
+    var top = cy - ((lines.length - 1) * lh) / 2;
+    for (var i = 0; i < lines.length; i++) {
+      var t = el('text', { x: cx, y: top + i * lh, 'text-anchor': anchor || 'middle', 'dominant-baseline': 'middle', 'font-size': size, fill: STROKE, class: 'hd-text' });
+      t.textContent = lines[i];
+      g.appendChild(t);
+    }
+    return g;
+  }
+
+  function chWidth(c) {
+    var n = c.charCodeAt(0);
+    if (n > 0x2e00) return 1.0;
+    if (n > 0x2000) return 0.8;
+    return 0.57;
+  }
+  function lineWidth(str, size) {
+    var w = 0;
+    for (var i = 0; i < str.length; i++) w += chWidth(str[i]);
+    return w * size;
+  }
+
+  // ------------------------------------------------------------- flowchart --
+  function renderFlow(spec, host) {
+    var s = new Sketch(spec.seed || 11);
+    var horizontal = (spec.dir === 'LR' || spec.dir === 'RL');
+    var byId = {};
+
+    spec.nodes.forEach(function (n, i) {
+      n.idx = i;
+      n.lines = n.label.split('\n');
+      var mw = 0;
+      n.lines.forEach(function (l) { mw = Math.max(mw, lineWidth(l, FS)); });
+      n.w = Math.max(104, Math.round(mw) + 36);
+      n.h = Math.max(48, n.lines.length * FS * 1.42 + 26);
+      if (n.shape === 'diamond') { n.w += 40; n.h += 18; }
+      if (!n.fill) n.fill = PALETTE[(i * 3) % PALETTE.length];
+      byId[n.id] = n;
+    });
+
+    // --- build layout units (groups become composite units) ---
+    var groups = spec.groups || [];
+    var unitOf = {}, units = [];
+    groups.forEach(function (g) {
+      var members = g.members.filter(function (m) { return byId[m]; });
+      if (!members.length) return;
+      var u = { kind: 'group', id: g.id, label: g.label, members: members };
+      units.push(u);
+      members.forEach(function (m) { unitOf[m] = u; });
+      unitOf[g.id] = u;
+    });
+    spec.nodes.forEach(function (n) {
+      if (unitOf[n.id]) return;
+      var u = { kind: 'single', id: n.id, members: [n.id] };
+      units.push(u);
+      unitOf[n.id] = u;
+    });
+
+    // size units
+    var GP = 18, TITLE = 26, GAPIN = 20;
+    units.forEach(function (u) {
+      if (u.kind === 'single') {
+        var n = byId[u.members[0]];
+        u.w = n.w; u.h = n.h;
+        u.rel = [{ n: n, x: 0, y: 0 }];
+        return;
+      }
+      var perRow = u.members.length <= 3 ? u.members.length : (u.members.length <= 4 ? 2 : 3);
+      if (horizontal && u.members.length > 3) perRow = 2;
+      var rows = [], cur = [];
+      u.members.forEach(function (m) {
+        cur.push(byId[m]);
+        if (cur.length === perRow) { rows.push(cur); cur = []; }
+      });
+      if (cur.length) rows.push(cur);
+      var rowW = rows.map(function (r) {
+        return r.reduce(function (a, n) { return a + n.w + GAPIN; }, -GAPIN);
+      });
+      var innerW = Math.max.apply(null, rowW);
+      var rel = [], y = 0;
+      rows.forEach(function (r, ri) {
+        var rh = Math.max.apply(null, r.map(function (n) { return n.h; }));
+        var x = (innerW - rowW[ri]) / 2;
+        r.forEach(function (n) { rel.push({ n: n, x: x, y: y + (rh - n.h) / 2 }); x += n.w + GAPIN; });
+        y += rh + GAPIN;
+      });
+      var innerH = y - GAPIN;
+      u.w = innerW + GP * 2;
+      u.h = innerH + GP * 2 + TITLE;
+      u.rel = rel.map(function (r) { return { n: r.n, x: r.x + GP, y: r.y + GP + TITLE }; });
+    });
+
+    // --- unit-level layering ---
+    var uidx = {};
+    units.forEach(function (u, i) { uidx[u.id] = i; u.layer = 0; });
+    var uEdges = [];
+    spec.edges.forEach(function (e) {
+      if (e.dotted) return;
+      var a = unitOf[e.from], b = unitOf[e.to];
+      if (!a || !b || a === b) return;
+      uEdges.push([a, b]);
+    });
+    for (var it = 0; it < units.length + 2; it++) {
+      var changed = false;
+      uEdges.forEach(function (e) {
+        if (e[1].layer < e[0].layer + 1) { e[1].layer = e[0].layer + 1; changed = true; }
+      });
+      if (!changed) break;
+    }
+
+    var byLayer = {};
+    units.forEach(function (u, i) { u.order = i; (byLayer[u.layer] = byLayer[u.layer] || []).push(u); });
+    var layers = Object.keys(byLayer).map(Number).sort(function (a, b) { return a - b; });
+
+    // --- barycenter ordering to reduce edge crossings ---
+    var pred = {}, succ = {};
+    units.forEach(function (u) { pred[u.id] = []; succ[u.id] = []; });
+    uEdges.forEach(function (e) {
+      if (e[0].layer >= e[1].layer) return; // skip back edges
+      succ[e[0].id].push(e[1]);
+      pred[e[1].id].push(e[0]);
+    });
+    layers.forEach(function (li) { byLayer[li].forEach(function (u, i) { u.pos = i; }); });
+    function bary(u, list) {
+      var arr = list[u.id];
+      if (!arr || !arr.length) return u.pos;
+      var sum = 0;
+      arr.forEach(function (v) { sum += v.pos; });
+      return sum / arr.length;
+    }
+    for (var sweep = 0; sweep < 6; sweep++) {
+      var seq = sweep % 2 ? layers.slice().reverse() : layers;
+      seq.forEach(function (li) {
+        var arr = byLayer[li];
+        var list = sweep % 2 ? succ : pred;
+        arr.forEach(function (u) { u.bc = bary(u, list); });
+        arr.sort(function (a, b) { return a.bc - b.bc || a.order - b.order; });
+        arr.forEach(function (u, i) { u.pos = i; });
+      });
+    }
+
+    var GAPM = 88, GAPC = 40, PAD = 40;
+    var main = PAD, maxCross = 0;
+    layers.forEach(function (li) {
+      var arr = byLayer[li], mainSize = 0, cross = 0;
+      arr.forEach(function (u) {
+        mainSize = Math.max(mainSize, horizontal ? u.w : u.h);
+        cross += (horizontal ? u.h : u.w) + GAPC;
+      });
+      cross -= GAPC;
+      arr.mainSize = mainSize; arr.cross = cross; arr.mainStart = main;
+      maxCross = Math.max(maxCross, cross);
+      main += mainSize + GAPM;
+    });
+    layers.forEach(function (li) {
+      var arr = byLayer[li];
+      var c = PAD + (maxCross - arr.cross) / 2;
+      arr.forEach(function (u) {
+        if (horizontal) { u.x = arr.mainStart + (arr.mainSize - u.w) / 2; u.y = c; c += u.h + GAPC; }
+        else { u.y = arr.mainStart + (arr.mainSize - u.h) / 2; u.x = c; c += u.w + GAPC; }
+      });
+    });
+    var W = (horizontal ? main - GAPM + PAD : maxCross + PAD * 2);
+    var H = (horizontal ? maxCross + PAD * 2 : main - GAPM + PAD);
+
+    units.forEach(function (u) {
+      u.rel.forEach(function (r) { r.n.x = u.x + r.x; r.n.y = u.y + r.y; });
+    });
+
+    function boxOf(id) {
+      if (byId[id]) return byId[id];
+      var u = unitOf[id];
+      return u ? { x: u.x, y: u.y, w: u.w, h: u.h } : null;
+    }
+    function anchors(a, b) {
+      var fx = a.x + a.w / 2, fy = a.y + a.h / 2, tx = b.x + b.w / 2, ty = b.y + b.h / 2;
+      var dx = tx - fx, dy = ty - fy;
+      if (Math.abs(dx) * (horizontal ? 1.4 : 0.8) > Math.abs(dy)) {
+        return [{ x: dx > 0 ? a.x + a.w : a.x, y: fy }, { x: dx > 0 ? b.x : b.x + b.w, y: ty }];
+      }
+      return [{ x: fx, y: dy > 0 ? a.y + a.h : a.y }, { x: tx, y: dy > 0 ? b.y : b.y + b.h }];
+    }
+
+    var svg = el('svg', { xmlns: 'http://www.w3.org/2000/svg', class: 'hd-svg' });
+    var g = el('g', {});
+    var backPad = 0;
+
+    // group frames
+    units.forEach(function (u) {
+      if (u.kind !== 'group') return;
+      var d = roundRectPath(u.x, u.y, u.w, u.h, 12, s, 1.8);
+      g.appendChild(el('path', { d: d, fill: '#f5f2ea', stroke: 'none', opacity: 0.8 }));
+      g.appendChild(el('path', { d: d, fill: 'none', stroke: '#7a7a7a', 'stroke-width': 1.5, 'stroke-dasharray': '9 6', 'stroke-linecap': 'round' }));
+      var t = el('text', { x: u.x + 14, y: u.y + 18, 'font-size': 14, fill: '#5c5c5c', class: 'hd-text' });
+      t.textContent = u.label;
+      g.appendChild(t);
+    });
+
+    function labelChip(text, cx, cy) {
+      var gg = el('g', {}), lines = text.split('\n'), fs = 12.5, w = 0;
+      lines.forEach(function (l) { w = Math.max(w, lineWidth(l, fs)); });
+      var h = lines.length * fs * 1.35 + 8;
+      gg.appendChild(el('rect', { x: cx - w / 2 - 7, y: cy - h / 2, width: w + 14, height: h, rx: 5, fill: '#fffdf5', stroke: '#ddd6c4', 'stroke-width': 1 }));
+      gg.appendChild(textBlock(lines, cx, cy, fs));
+      return gg;
+    }
+
+    spec.edges.forEach(function (e) {
+      var a = boxOf(e.from), b = boxOf(e.to);
+      if (!a || !b) return;
+      if (e.from === e.to) {
+        var lx = a.x + a.w, ly = a.y + a.h / 2;
+        g.appendChild(el('path', {
+          d: 'M' + lx + ',' + (ly - 13) + ' C' + (lx + 62) + ',' + (ly - 48) + ' ' + (lx + 62) + ',' + (ly + 48) + ' ' + lx + ',' + (ly + 13),
+          fill: 'none', stroke: STROKE, 'stroke-width': 1.6, 'stroke-dasharray': e.dotted ? '7 5' : null
+        }));
+        g.appendChild(arrowHead(s, lx, ly + 13, Math.PI * 0.72));
+        if (e.label) g.appendChild(labelChip(e.label, lx + 70, ly));
+        return;
+      }
+      var ua = unitOf[e.from] || unitOf[byId[e.from] && byId[e.from].id];
+      var ub = unitOf[e.to] || unitOf[byId[e.to] && byId[e.to].id];
+      if (!e.dotted && ua && ub && ua.layer > ub.layer) {
+        // back edge: route around the side so the loop stays readable
+        var side = (a.x + a.w / 2) >= (b.x + b.w / 2) ? 1 : -1;
+        var sx = side > 0 ? a.x + a.w : a.x, sy = a.y + a.h / 2;
+        var tx = side > 0 ? b.x + b.w : b.x, ty = b.y + b.h / 2;
+        var off = side * (70 + Math.min(90, Math.abs(sy - ty) * 0.25));
+        backPad = Math.max(backPad, Math.abs(off) + 70);
+        g.appendChild(el('path', {
+          d: 'M' + sx + ',' + sy + ' C' + (sx + off) + ',' + sy + ' ' + (tx + off) + ',' + ty + ' ' + tx + ',' + ty,
+          fill: 'none', stroke: '#555', 'stroke-width': 1.6, 'stroke-linecap': 'round'
+        }));
+        g.appendChild(arrowHead(s, tx, ty, side > 0 ? Math.PI : 0));
+        if (e.label) g.appendChild(labelChip(e.label, (sx + tx) / 2 + off * 0.82, (sy + ty) / 2));
+        return;
+      }
+      var p = anchors(a, b), p1 = p[0], p2 = p[1];
+      var mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+      g.appendChild(el('path', {
+        d: 'M' + p1.x + ',' + p1.y + ' Q' + (mx + s.j(5)) + ',' + (my + s.j(5)) + ' ' + p2.x + ',' + p2.y,
+        fill: 'none', stroke: e.dotted ? '#8a8a8a' : STROKE,
+        'stroke-width': e.dotted ? 1.4 : 1.8, 'stroke-linecap': 'round',
+        'stroke-dasharray': e.dotted ? '8 6' : null
+      }));
+      if (e.arrow !== false) g.appendChild(arrowHead(s, p2.x, p2.y, Math.atan2(p2.y - my, p2.x - mx)));
+      if (e.label) g.appendChild(labelChip(e.label, mx, my));
+    });
+
+    spec.nodes.forEach(function (n) {
+      g.appendChild(shape(s, n));
+      g.appendChild(textBlock(n.lines, n.x + n.w / 2, n.y + n.h / 2, FS));
+    });
+
+    var VX = -backPad, VW = W + backPad * 2;
+    svg.setAttribute('viewBox', VX + ' 0 ' + VW + ' ' + H);
+    svg.setAttribute('width', Math.round(VW));
+    svg.setAttribute('height', Math.round(H));
+    svg.appendChild(g);
+    host.appendChild(svg);
+    return { w: VW, h: H };
+  }
+
+  // ------------------------------------------------------- sequence diagram --
+  function renderSeq(spec, host) {
+    var s = new Sketch(spec.seed || 23);
+    var boxH = 56, gap = 62, parts = spec.participants;
+    var cur = 30, xs = [];
+    parts.forEach(function (p) {
+      p.lines = p.label.split('\n');
+      var w = 0;
+      p.lines.forEach(function (l) { w = Math.max(w, lineWidth(l, FS)); });
+      p.w = Math.max(120, w + 32);
+      p.h = Math.max(boxH, p.lines.length * FS * 1.4 + 24);
+      p.x = cur; cur += p.w + gap;
+      xs.push(p.x + p.w / 2);
+    });
+    boxH = Math.max.apply(null, parts.map(function (p) { return p.h; }));
+    var width = cur - gap + 30;
+
+    var y = 34 + boxH + 26;
+    spec.messages.forEach(function (m) {
+      m.lines = m.text.split('\n');
+      m.h = m.lines.length * 13 * 1.4 + (m.note ? 46 : 30);
+      m.y = y; y += m.h;
+    });
+    var height = y + 40;
+
+    var svg = el('svg', { xmlns: 'http://www.w3.org/2000/svg', class: 'hd-svg', viewBox: '0 0 ' + width + ' ' + height, width: Math.round(width), height: Math.round(height) });
+    var g = el('g', {});
+
+    xs.forEach(function (cx) {
+      g.appendChild(el('line', { x1: cx, y1: 34 + boxH, x2: cx, y2: height - 18, stroke: '#a5a5a5', 'stroke-width': 1.3, 'stroke-dasharray': '8 7' }));
+    });
+
+    spec.messages.forEach(function (m) {
+      if (m.note) {
+        g.appendChild(el('rect', { x: 16, y: m.y - 4, width: width - 32, height: m.h - 2, rx: 9, fill: '#eef6ff', stroke: '#9ec5f0', 'stroke-width': 1.2, 'stroke-dasharray': '7 5' }));
+        var nt = el('text', { x: 28, y: m.y + 14, 'font-size': 12.5, fill: '#3b6ea5', class: 'hd-text' });
+        nt.textContent = m.note;
+        g.appendChild(nt);
+      }
+      var y0 = m.y + m.h - 14;
+      if (m.fromIdx === m.toIdx) {
+        var cx = xs[m.fromIdx];
+        g.appendChild(el('path', {
+          d: 'M' + cx + ',' + (y0 - 24) + ' C' + (cx + 72) + ',' + (y0 - 28) + ' ' + (cx + 72) + ',' + y0 + ' ' + cx + ',' + y0,
+          fill: 'none', stroke: STROKE, 'stroke-width': 1.6, 'stroke-dasharray': m.dashed ? '7 5' : null
+        }));
+        g.appendChild(arrowHead(s, cx, y0, Math.PI * 0.8));
+        g.appendChild(textBlock(m.lines, cx + 84, y0 - 14, 13, 'start'));
+      } else {
+        var x1 = xs[m.fromIdx], x2 = xs[m.toIdx], dir = x2 > x1 ? 1 : -1;
+        g.appendChild(el('line', {
+          x1: x1 + dir * 4, y1: y0, x2: x2 - dir * 7, y2: y0 + s.j(1),
+          stroke: STROKE, 'stroke-width': m.dashed ? 1.4 : 1.8, 'stroke-linecap': 'round',
+          'stroke-dasharray': m.dashed ? '9 6' : null
+        }));
+        g.appendChild(arrowHead(s, x2 - dir * 7, y0, dir > 0 ? 0 : Math.PI));
+        var cx2 = (x1 + x2) / 2, lw = 0;
+        m.lines.forEach(function (l) { lw = Math.max(lw, lineWidth(l, 13)); });
+        var lh = m.lines.length * 13 * 1.4 + 8;
+        g.appendChild(el('rect', { x: cx2 - lw / 2 - 8, y: y0 - lh - 7, width: lw + 16, height: lh, rx: 5, fill: '#fffdf5', stroke: '#e0dbcb', 'stroke-width': 1 }));
+        g.appendChild(textBlock(m.lines, cx2, y0 - lh / 2 - 7, 13));
+      }
+    });
+
+    parts.forEach(function (p, i) {
+      var node = { x: p.x, y: 34, w: p.w, h: boxH, fill: PALETTE[i % PALETTE.length], shape: 'rect' };
+      g.appendChild(shape(s, node));
+      g.appendChild(textBlock(p.lines, p.x + p.w / 2, 34 + boxH / 2, FS));
+    });
+
+    svg.appendChild(g);
+    host.appendChild(svg);
+    return { w: width, h: height };
+  }
+
+  window.HandDrawn = {
+    render: function () {
+      var hosts = document.querySelectorAll('[data-diagram]');
+      Array.prototype.forEach.call(hosts, function (h) {
+        var spec = JSON.parse(h.getAttribute('data-diagram'));
+        h.removeAttribute('data-diagram');
+        try {
+          var size = spec.type === 'sequence' ? renderSeq(spec, h) : renderFlow(spec, h);
+          var fig = h.closest('figure');
+          if (fig && size) {
+            var svg = h.querySelector('svg');
+            var fit = function () {
+              var avail = fig.clientWidth - 30;
+              var scale = Math.min(1, avail / size.w);
+              if (fig.classList.contains('zoomed')) scale = 1;
+              svg.setAttribute('width', Math.round(size.w * scale));
+              svg.setAttribute('height', Math.round(size.h * scale));
+            };
+            fit();
+            window.addEventListener('resize', fit);
+            if (size.w > fig.clientWidth - 30) {
+              var btn = document.createElement('button');
+              btn.className = 'zoom-btn';
+              btn.textContent = '\u2295 \u539f\u5c3a\u5bf8\u67e5\u770b';
+              btn.onclick = function () {
+                fig.classList.toggle('zoomed');
+                btn.textContent = fig.classList.contains('zoomed') ? '\u2296 \u9002\u5e94\u5bbd\u5ea6' : '\u2295 \u539f\u5c3a\u5bf8\u67e5\u770b';
+                fit();
+              };
+              fig.appendChild(btn);
+            }
+          }
+        } catch (err) {
+          var pre = document.createElement('pre');
+          pre.textContent = 'diagram render error: ' + err;
+          h.appendChild(pre);
+        }
+      });
+    }
+  };
+})();
+</script>
+<script>HandDrawn.render();</script>
+</body>
+</html>

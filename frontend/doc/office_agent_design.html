@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Office_Agent 设计文档</title>
+<style>
+/* Soft SaaS teal 皮肤：与主应用(tokens)同色系；正文与手绘图表内容不变 */
+:root{--ink:#22302e;--muted:#6b7d7a;--teal-600:#0D9488;--teal-700:#0F766E;--teal-800:#115E59;
+  --teal-50:#E6F7F4;--bg:#F4F8F7;--card:#ffffff;--line:#E3EEEB;--accent:#0F766E;
+  --shadow:0 8px 24px rgba(15,118,110,.07),0 2px 6px rgba(23,23,23,.03);}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Segoe UI","PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+  font-size:16px;line-height:1.85;}
+.layout{display:flex;align-items:flex-start;max-width:1560px;margin:0 auto;}
+.toc{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;width:272px;flex:0 0 272px;
+  margin:16px 0 16px 16px;padding:22px 14px 40px;background:var(--card);border:1px solid var(--line);
+  border-radius:18px;box-shadow:var(--shadow);font-size:13.5px;line-height:1.6;}
+.toc-title{font-size:15px;font-weight:700;margin:0 6px 12px;color:var(--teal-800);letter-spacing:1px}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc li{margin:2px 0}
+.toc li.lv3{padding-left:14px;font-size:12.5px;opacity:.8}
+.toc a{color:#4a5c59;text-decoration:none;display:block;padding:3px 8px;border-radius:8px}
+.toc a:hover{background:var(--teal-50);color:var(--teal-700)}
+main{flex:1;min-width:0;margin:16px;padding:46px 52px 64px;background:var(--card);
+  border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);}
+.back-home{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--teal-700);
+  text-decoration:none;margin-bottom:24px;padding:5px 14px;border:1px solid var(--line);
+  border-radius:999px;background:var(--teal-50);transition:background .15s}
+.back-home:hover{background:#D3EEE8}
+h1{font-size:32px;margin:0 0 6px;letter-spacing:.5px;color:var(--teal-800)}
+.subtitle{color:var(--muted);font-size:14px;margin-bottom:18px}
+.author-card{display:flex;align-items:center;gap:14px;margin:20px 0 10px;padding:14px 18px;max-width:540px;
+  background:linear-gradient(135deg,var(--teal-50),#F2FAF8);border:1px solid var(--line);border-radius:16px}
+.author-avatar{width:44px;height:44px;flex:0 0 44px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;color:#fff;font-size:19px;font-weight:700;
+  background:linear-gradient(135deg,var(--teal-600),var(--teal-800));box-shadow:0 4px 10px rgba(13,148,136,.28)}
+.author-name{font-weight:700;font-size:15.5px;color:var(--ink)}
+.author-meta{font-size:12.5px;color:var(--muted)}
+h2{font-size:24px;margin:52px 0 14px;padding:0 0 10px 14px;color:var(--teal-800);
+  border-bottom:1px solid var(--line);border-left:5px solid var(--teal-600)}
+h3{font-size:19px;margin:34px 0 10px;color:var(--teal-700)}
+h4{font-size:16.5px;margin:24px 0 8px;color:#334340}
+p{margin:12px 0}
+ul,ol{margin:12px 0;padding-left:26px}
+li{margin:5px 0}
+a{color:var(--teal-700)}
+code{background:var(--teal-50);border:1px solid var(--line);border-radius:6px;padding:1px 6px;
+  font-size:13.5px;color:var(--teal-800);
+  font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+pre.code{background:#12332F;color:#D9F2EC;padding:18px 20px;border-radius:14px;overflow:auto;
+  font-size:13px;line-height:1.6;box-shadow:var(--shadow)}
+pre.code code{background:none;border:none;color:inherit;padding:0}
+blockquote{margin:18px 0;padding:14px 18px;background:var(--teal-50);border-left:4px solid var(--teal-600);
+  border-radius:0 12px 12px 0;color:#3d4f4c;font-size:14.5px}
+hr{border:none;border-top:1px solid var(--line);margin:44px 0}
+.callout{display:flex;gap:14px;background:#F0FAF7;border:1px solid #BFE6DE;border-radius:14px;
+  padding:16px 18px;margin:20px 0;box-shadow:var(--shadow)}
+.callout-icon{font-size:22px;line-height:1.3}
+.callout-body p{margin:4px 0}
+.callout-body ul{margin:6px 0}
+.table-wrap{overflow-x:auto;margin:20px 0;border-radius:14px;box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14px;background:#fff;
+  border:1px solid var(--line);border-radius:14px;overflow:hidden}
+th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top;line-height:1.65}
+th{background:var(--teal-50);font-weight:600;color:var(--teal-800)}
+tr:nth-child(even) td{background:#F7FBFA}
+figure.diagram{position:relative;margin:28px 0;padding:20px 16px 26px;background:#fff;
+  border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow-x:auto}
+figure.diagram.zoomed{overflow-x:auto}
+.hd-svg{display:block;margin:0 auto}
+.zoom-btn{position:absolute;right:12px;bottom:8px;font-size:12px;color:var(--teal-700);background:var(--teal-50);
+  border:1px solid #BFE6DE;border-radius:999px;padding:2px 12px;cursor:pointer;font-family:inherit}
+.zoom-btn:hover{background:#D3EEE8}
+.hd-text{font-family:"Comic Sans MS","Segoe Print","Noto Sans SC","PingFang SC",sans-serif}
+.doc-footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12.5px;color:var(--muted)}
+.doc-footer a{color:var(--teal-700);text-decoration:none}
+.doc-footer a:hover{text-decoration:underline}
+@media(max-width:1000px){.toc{display:none}main{margin:10px;padding:28px 20px 60px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc"><div class="toc-title">目录</div><ul><li class="lv2"><a href="#零-一张图看懂整个设计">零、一张图看懂整个设计</a></li><li class="lv2"><a href="#一-系统概览">一、系统概览</a></li><li class="lv3"><a href="#1-1-部署形态">1.1 部署形态</a></li><li class="lv3"><a href="#1-2-关键配置">1.2 关键配置</a></li><li class="lv2"><a href="#二-代码结构">二、代码结构</a></li><li class="lv3"><a href="#为什么最后没用-LangGraph">为什么最后没用 LangGraph</a></li><li class="lv2"><a href="#三-LLM-接入层">三、LLM 接入层</a></li><li class="lv3"><a href="#3-1-协议翻译">3.1 协议翻译</a></li><li class="lv3"><a href="#3-2-重试-一个我踩过的坑">3.2 重试：一个我踩过的坑</a></li><li class="lv3"><a href="#3-3-并发闸">3.3 并发闸</a></li><li class="lv3"><a href="#3-4-流式解析">3.4 流式解析</a></li><li class="lv2"><a href="#四-Agent-运行时">四、Agent 运行时</a></li><li class="lv3"><a href="#4-1-一次单聊请求走完的全链路">4.1 一次单聊请求走完的全链路</a></li><li class="lv3"><a href="#4-2-ReAct-主循环">4.2 ReAct 主循环</a></li><li class="lv3"><a href="#4-3-三个专门处理模型行为异常的补丁">4.3 三个专门处理模型行为异常的补丁</a></li><li class="lv3"><a href="#4-4-预算模型">4.4 预算模型</a></li><li class="lv3"><a href="#4-5-System-Prompt-的组装">4.5 System Prompt 的组装</a></li><li class="lv3"><a href="#4-6-工具契约">4.6 工具契约</a></li><li class="lv3"><a href="#4-7-Hook-切面">4.7 Hook 切面</a></li><li class="lv2"><a href="#五-工具层">五、工具层</a></li><li class="lv3"><a href="#5-1-业务工具">5.1 业务工具</a></li><li class="lv3"><a href="#5-2-代码工具">5.2 代码工具</a></li><li class="lv3"><a href="#5-3-作用域收敛-我认为这是系统里最重要的一个设计">5.3 作用域收敛：我认为这是系统里最重要的一个设计</a></li><li class="lv3"><a href="#5-4-MCP-集成">5.4 MCP 集成</a></li><li class="lv2"><a href="#六-检索-RAG">六、检索（RAG）</a></li><li class="lv3"><a href="#6-1-先把话说明白">6.1 先把话说明白</a></li><li class="lv3"><a href="#6-2-四条检索路径">6.2 四条检索路径</a></li><li class="lv3"><a href="#6-3-代码检索的成本">6.3 代码检索的成本</a></li><li class="lv3"><a href="#6-4-与其他检索范式的机制差异">6.4 与其他检索范式的机制差异</a></li><li class="lv3"><a href="#6-5-我的改进计划">6.5 我的改进计划</a></li><li class="lv2"><a href="#七-记忆-Memory">七、记忆（Memory）</a></li><li class="lv3"><a href="#7-1-四类状态的载体">7.1 四类状态的载体</a></li><li class="lv3"><a href="#7-2-上下文压缩">7.2 上下文压缩</a></li><li class="lv3"><a href="#7-3-长期记忆-我选了人工审核制">7.3 长期记忆：我选了人工审核制</a></li><li class="lv3"><a href="#7-4-与其他记忆方案的机制差异">7.4 与其他记忆方案的机制差异</a></li><li class="lv2"><a href="#八-规划-Plan">八、规划（Plan）</a></li><li class="lv3"><a href="#8-1-请求级-三级分诊链">8.1 请求级：三级分诊链</a></li><li class="lv3"><a href="#8-2-任务级-协作会议室">8.2 任务级：协作会议室</a></li><li class="lv3"><a href="#8-3-SubagentManager-已实现-主路径未接入">8.3 SubagentManager（已实现，主路径未接入）</a></li><li class="lv3"><a href="#8-4-与其他规划范式的机制差异">8.4 与其他规划范式的机制差异</a></li><li class="lv3"><a href="#8-5-这套规划真正不一样的地方-以及它的天花板">8.5 这套规划真正不一样的地方，以及它的天花板</a></li><li class="lv2"><a href="#九-Git-仓库管理">九、Git 仓库管理</a></li><li class="lv3"><a href="#9-1-git_service">9.1 git_service</a></li><li class="lv3"><a href="#9-2-定时刷新">9.2 定时刷新</a></li><li class="lv3"><a href="#9-3-仓库-REST-接口">9.3 仓库 REST 接口</a></li><li class="lv2"><a href="#十-数据模型">十、数据模型</a></li><li class="lv2"><a href="#十一-并发-超时与失败模式">十一、并发、超时与失败模式</a></li><li class="lv3"><a href="#三个我在线上碰到过的真实故障">三个我在线上碰到过的真实故障</a></li><li class="lv3"><a href="#SSE-场景下的一条数据库纪律">SSE 场景下的一条数据库纪律</a></li><li class="lv2"><a href="#十二-总结">十二、总结</a></li><li class="lv3"><a href="#12-1-我认为这套系统做对的五件事">12.1 我认为这套系统做对的五件事</a></li><li class="lv3"><a href="#12-2-我自己列的待办清单">12.2 我自己列的待办清单</a></li><li class="lv3"><a href="#12-3-这套系统的取向">12.3 这套系统的取向</a></li></ul></nav>
+<main>
+<a class="back-home" href="/doc/">← 返回文档中心</a>
+<h1>🧩 Office_Agent 设计文档</h1>
+<div class="subtitle">架构与 Agent 实现细节</div>
+<div class="author-card">
+  <div class="author-avatar">张</div>
+  <div>
+    <div class="author-name">张朝</div>
+    <div class="author-meta">作者 · 系统设计与实现 · 2026-08</div>
+  </div>
+</div>
+<p>这份文档写给需要接手、评审或参考这套系统的人。我会把架构、Agent 运行时、检索、记忆、规划这几块的实现讲清楚，包括我当时为什么这么选、代价是什么、哪些地方我自己也不满意。</p>
+<div class="callout"><div class="callout-icon">📐</div><div class="callout-body"><p><strong>几个阅读约定</strong></p><ul><li>写成「实现」的，都能在指定文件里直接对上，包括常量、正则、默认参数。</li><li>写成「取舍」的，是我当时的决策理由，不一定是最优解，但背后的权衡我会说明白。</li><li>写成「已知不足」的，是我自己已经识别、但还没改的问题，不必客气。</li><li>对比章节只讲机制差异，不给其他方案打分。我选了一条路，不代表别的路不对，只是场景不同。</li><li>性能相关的判断都是我从代码推的，没做过压测，看的人请按此折扣。</li></ul></div></div>
+
+<hr>
+<h2 id="零-一张图看懂整个设计">零、一张图看懂整个设计</h2>
+<p>先把脉络给出来。这套系统就是<strong>一条主链路 + 四根横向支柱</strong>：提问经分诊拿到身份，装配上下文，进 ReAct 循环，循环里靠工具去检索；而岗位包、作用域、Hook、记忆这四根支柱全程约束它。</p>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;LR&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;U&quot;, &quot;label&quot;: &quot;用户提问&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;D&quot;, &quot;label&quot;: &quot;① 分诊\nL1 关键词 → L2 仓库名 → L3 LLM&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;C&quot;, &quot;label&quot;: &quot;② 上下文装配 build_context\n历史 10 条 + 技能摘要\n+ 仓库绑定 + 岗位包&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;L&quot;, &quot;label&quot;: &quot;③ ReAct 循环\n思考 → 调工具 → 观察&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R&quot;, &quot;label&quot;: &quot;④ 检索工具\n知识库 / 资源 / 代码 / 仓库文档 / MCP&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;F&quot;, &quot;label&quot;: &quot;⑤ 收敛成答\n预算耗尽则 finalize 兜底&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;O&quot;, &quot;label&quot;: &quot;SSE 流式输出 + 审计落库&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;COL&quot;, &quot;label&quot;: &quot;跨领域？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;RM&quot;, &quot;label&quot;: &quot;协作会议室\n拆解 → 并行草案 → 互评 → 合成&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;P&quot;, &quot;label&quot;: &quot;支柱一：岗位包 RolePack\n工具白名单 + 四维预算&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S&quot;, &quot;label&quot;: &quot;支柱二：作用域收敛\n_RepoScopeMixin&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;HK&quot;, &quot;label&quot;: &quot;支柱三：Hooks\n注入检测 / 脱敏 / 审计&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;M&quot;, &quot;label&quot;: &quot;支柱四：记忆\nMessage 表 + 上下文压缩\n+ 已审核知识库&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;U&quot;, &quot;to&quot;: &quot;D&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;D&quot;, &quot;to&quot;: &quot;C&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;C&quot;, &quot;to&quot;: &quot;L&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L&quot;, &quot;to&quot;: &quot;R&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;R&quot;, &quot;to&quot;: &quot;L&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L&quot;, &quot;to&quot;: &quot;F&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;F&quot;, &quot;to&quot;: &quot;O&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;O&quot;, &quot;to&quot;: &quot;COL&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;COL&quot;, &quot;to&quot;: &quot;RM&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;P&quot;, &quot;to&quot;: &quot;L&quot;, &quot;dotted&quot;: true, &quot;label&quot;: &quot;决定能调什么、能跑多久&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;S&quot;, &quot;to&quot;: &quot;R&quot;, &quot;dotted&quot;: true, &quot;label&quot;: &quot;决定能查哪个仓库&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;HK&quot;, &quot;to&quot;: &quot;L&quot;, &quot;dotted&quot;: true, &quot;label&quot;: &quot;每次工具调用前后&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;M&quot;, &quot;to&quot;: &quot;C&quot;, &quot;dotted&quot;: true, &quot;label&quot;: &quot;供给与回写&quot;, &quot;arrow&quot;: true}], &quot;groups&quot;: [], &quot;seed&quot;: 20}"></div></figure>
+<p>如果只看一张图，看上面那张就够了。下面这张是分层视角的同一件事，方便定位代码：</p>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;TB&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;A1&quot;, &quot;label&quot;: &quot;routers/frontdesk.py\n对话 + 分诊 + SSE&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;A2&quot;, &quot;label&quot;: &quot;routers/tasks.py\n协作会议室&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;A3&quot;, &quot;label&quot;: &quot;routers/repos.py\n仓库管理&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;B1&quot;, &quot;label&quot;: &quot;runtime/runner.py\nReAct 主循环&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;B2&quot;, &quot;label&quot;: &quot;runtime/context.py\n上下文 + 预算&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;B3&quot;, &quot;label&quot;: &quot;runtime/consolidator.py\n上下文压缩&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;B4&quot;, &quot;label&quot;: &quot;runtime/hooks.py\n安全 + 审计切面&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;C1&quot;, &quot;label&quot;: &quot;tool_registry.py + tool_base.py\n工具契约与校验&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;C2&quot;, &quot;label&quot;: &quot;tools/ 内置十个工具&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;C3&quot;, &quot;label&quot;: &quot;mcp_client.py\n外部 MCP 工具&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;D1&quot;, &quot;label&quot;: &quot;runtime/provider.py\n协议翻译 / 重试 / 并发闸&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;D2&quot;, &quot;label&quot;: &quot;services/git_service.py&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;D3&quot;, &quot;label&quot;: &quot;MySQL / Redis / workspaces/&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;L5&quot;, &quot;to&quot;: &quot;L4&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L4&quot;, &quot;to&quot;: &quot;L3L&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L3L&quot;, &quot;to&quot;: &quot;L2L&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}], &quot;groups&quot;: [{&quot;id&quot;: &quot;L5&quot;, &quot;label&quot;: &quot;接入层&quot;, &quot;members&quot;: [&quot;A1&quot;, &quot;A2&quot;, &quot;A3&quot;]}, {&quot;id&quot;: &quot;L4&quot;, &quot;label&quot;: &quot;编排层&quot;, &quot;members&quot;: [&quot;B1&quot;, &quot;B2&quot;, &quot;B3&quot;, &quot;B4&quot;]}, {&quot;id&quot;: &quot;L3L&quot;, &quot;label&quot;: &quot;能力层&quot;, &quot;members&quot;: [&quot;C1&quot;, &quot;C2&quot;, &quot;C3&quot;]}, {&quot;id&quot;: &quot;L2L&quot;, &quot;label&quot;: &quot;接入与存储&quot;, &quot;members&quot;: [&quot;D1&quot;, &quot;D2&quot;, &quot;D3&quot;]}], &quot;seed&quot;: 33}"></div></figure>
+<hr>
+<h2 id="一-系统概览">一、系统概览</h2>
+<h3 id="1-1-部署形态">1.1 部署形态</h3>
+<p>我把整套东西做成了单进程 FastAPI 应用，固定 8000 端口，REST、SSE 和静态前端都在同一个进程里。没拆微服务，因为当前规模下拆开只会增加部署和调试成本。</p>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;TB&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;BR&quot;, &quot;label&quot;: &quot;浏览器 · 无构建 SPA&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;E1&quot;, &quot;label&quot;: &quot;/api/frontdesk/*\n对话与分诊（SSE）&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;E2&quot;, &quot;label&quot;: &quot;/api/tasks/*\n协作会议室&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;E3&quot;, &quot;label&quot;: &quot;/api/repos/*\n代码仓库管理&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;E4&quot;, &quot;label&quot;: &quot;/api/knowledge/*\n知识条目&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;E5&quot;, &quot;label&quot;: &quot;/api/admin/*\n组织与员工&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;E6&quot;, &quot;label&quot;: &quot;/api/governance/*\n岗位包 / 变更单 / 策略&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;E7&quot;, &quot;label&quot;: &quot;/api/graph · /api/dashboard\n/api/agents · /api/auth&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;DB&quot;, &quot;label&quot;: &quot;MySQL 8\naiomysql + SQLAlchemy 2.0 async&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;RD&quot;, &quot;label&quot;: &quot;Redis\nredis.asyncio&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;FS&quot;, &quot;label&quot;: &quot;本地文件系统\nworkspaces/repo_id/（git clone 落地）&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;LLM&quot;, &quot;label&quot;: &quot;HTTPS → open.bigmodel.cn/api/anthropic\nAnthropic Messages 协议&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;BR&quot;, &quot;to&quot;: &quot;API&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;fetch / EventSource&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;API&quot;, &quot;to&quot;: &quot;DB&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;API&quot;, &quot;to&quot;: &quot;RD&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;API&quot;, &quot;to&quot;: &quot;FS&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;API&quot;, &quot;to&quot;: &quot;LLM&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}], &quot;groups&quot;: [{&quot;id&quot;: &quot;API&quot;, &quot;label&quot;: &quot;FastAPI :8000 单进程 · 含静态文件托管&quot;, &quot;members&quot;: [&quot;E1&quot;, &quot;E2&quot;, &quot;E3&quot;, &quot;E4&quot;, &quot;E5&quot;, &quot;E6&quot;, &quot;E7&quot;]}], &quot;seed&quot;: 46}"></div></figure>
+<p><strong>实现</strong>：<code>main.py</code> 的 lifespan 里我只做三件事——<code>init_db()</code> 建表、拉起后台任务 <code>repo_scheduler.auto_refresh_loop()</code>、关闭时释放 Redis 连接。</p>
+<h3 id="1-2-关键配置">1.2 关键配置</h3>
+<p>当前版本 <code>APP_VERSION = &quot;0.2.0&quot;</code>，配置集中在 <code>backend/config.py</code>：</p>
+<div class="table-wrap"><table><tr><th><code>LLM_TEMPERATURE</code></th><th><code>0.7</code></th><th>—</th></tr><tr><td><code>LLM_MAX_TOKENS</code></td><td><code>16384</code></td><td>推理模型的思考过程也吃输出 token，我设 4096 时碰到过正文被截成空的情况</td></tr><tr><td><code>LLM_BASE_URL</code></td><td><code>https://open.bigmodel.cn/api/anthropic</code></td><td>走 Anthropic 兼容端点</td></tr><tr><td><code>LLM_MODEL</code></td><td><code>glm-5.2</code></td><td>—</td></tr><tr><td>配置项</td><td>默认值</td><td>我为什么设这个值</td></tr><tr><td><code>LLM_TIMEOUT</code></td><td><code>60</code> 秒</td><td>—</td></tr><tr><td><code>LLM_CONCURRENCY</code></td><td><code>2</code></td><td>我宁可慢，不想被上游限流打断</td></tr><tr><td><code>WORKSPACE_ROOT</code></td><td><code>&lt;项目根&gt;/workspaces</code></td><td>仓库 clone 落地目录</td></tr><tr><td><code>USE_LANGCHAIN</code> / <code>USE_MULTI_AGENT</code></td><td><code>false</code> / <code>false</code></td><td>LangGraph 旁路开关，默认关</td></tr></table></div>
+<p><strong>已知不足（优先级最高）</strong>：我把 MySQL 密码、Redis 密码、LLM API Key 写成了明文默认值，而仓库是公开的。这三项已经算泄露，我需要轮换它们，并把逻辑改成「拿不到环境变量就启动失败」。本文不复述具体值。</p>
+<hr>
+<h2 id="二-代码结构">二、代码结构</h2>
+<div class="table-wrap"><table><tr><th>路径</th><th>职责</th><th>关键实现点</th></tr><tr><td><code>backend/main.py</code></td><td>应用装配</td><td>10 个 router、静态托管、lifespan 启动调度器</td></tr><tr><td><code>backend/config.py</code></td><td>配置</td><td>环境变量读取</td></tr><tr><td><code>backend/database.py</code></td><td>数据库</td><td>async engine、<code>async_session</code>、<code>get_db</code></td></tr><tr><td><code>backend/runtime/provider.py</code></td><td>LLM 接入层</td><td>协议翻译、重试、并发闸、流式解析</td></tr><tr><td><code>backend/runtime/context.py</code></td><td>上下文装配</td><td><code>AgentContext</code>、<code>Budget</code>、<code>build_context</code>、<code>build_system_prompt</code></td></tr><tr><td><code>backend/runtime/runner.py</code></td><td>ReAct 主循环</td><td><code>execute</code> / <code>execute_stream</code></td></tr><tr><td><code>backend/runtime/tool_registry.py</code></td><td>工具注册与调用</td><td>定义缓存、参数转换与校验</td></tr><tr><td><code>backend/runtime/tool_base.py</code></td><td>工具契约</td><td><code>Tool</code> 四要素 + <code>ToolResult</code></td></tr><tr><td><code>backend/runtime/tools/</code></td><td>内置工具</td><td>业务检索 + 代码检索</td></tr><tr><td><code>backend/runtime/mcp_client.py</code></td><td>MCP 接入</td><td>SSE transport、工具名前缀、会话生命周期</td></tr><tr><td><code>backend/runtime/hooks.py</code></td><td>切面</td><td><code>AuditHook</code>、<code>SecurityHook</code></td></tr><tr><td><code>backend/runtime/consolidator.py</code></td><td>上下文压缩</td><td>token 估算、摘要、降级截断</td></tr><tr><td><code>backend/runtime/subagent.py</code></td><td>子代理</td><td>已实现，主路径未接入</td></tr><tr><td><code>backend/routers/frontdesk.py</code></td><td>对话入口</td><td>三级分诊 + SSE</td></tr><tr><td><code>backend/routers/tasks.py</code></td><td>协作会议室</td><td>拆解 / 并行 / 互评 / 合成</td></tr><tr><td><code>backend/routers/repos.py</code></td><td>仓库 REST</td><td>clone / 搜索 / 分支 / 定时刷新 / 删除</td></tr><tr><td><code>backend/services/git_service.py</code></td><td>Git 封装</td><td>子进程调 git CLI，路径安全</td></tr><tr><td><code>backend/services/repo_scheduler.py</code></td><td>定时任务</td><td>60s 轮询，到期 <code>git pull --ff-only</code></td></tr><tr><td><code>backend/agents/</code></td><td>LangGraph 旁路</td><td>默认关闭</td></tr></table></div>
+<p><strong>关于 </strong><strong>`backend/agents/`</strong>：这里面是我早期用 LangGraph 跑通的一版实现，后来生产路径全部换成了自研运行时。我在 <code>multi_agent.py</code> 文件头写了废弃声明，但没删，因为它作为对照组还有参考价值。接手的人不要在它上面做新开发。</p>
+<h3 id="为什么最后没用-LangGraph">为什么最后没用 LangGraph</h3>
+<p>不是框架不好，是我需要的三件事恰好是它抽象掉的那一层：</p>
+<div class="table-wrap"><table><tr><th>我需要的</th><th>自研运行时里的做法</th><th>旁路版本的状态</th></tr><tr><td>每个员工工具集不同</td><td>按岗位包白名单动态构建 Registry</td><td><code>get_all_tools()</code> 全量给出</td></tr><tr><td>四维预算</td><td>步数/调用数/token/超时显式计数</td><td>只有 <code>recursion_limit</code></td></tr><tr><td>会话历史</td><td>从 <code>Message</code> 表按会话加载</td><td>我当时写的是 <code>history=[]  # TODO</code></td></tr><tr><td>仓库/领域作用域</td><td>下沉到工具实例构造期</td><td>无</td></tr><tr><td>自定义 SSE 事件</td><td>直接向外吐 thinking / tool.start / tool.result</td><td>需适配 astream 事件</td></tr></table></div>
+<p>自己写循环的代价是要自己处理很多边界条件，这部分工作量不小。但因为权限边界和成本控制是这个产品的核心诉求，我认为这笔花得值。</p>
+<hr>
+<h2 id="三-LLM-接入层">三、LLM 接入层</h2>
+<p>这一层离外部不确定性最近，我在这里花的时间最多，坑也踩得最多。</p>
+<h3 id="3-1-协议翻译">3.1 协议翻译</h3>
+<p><strong>取舍</strong>：内部历史统一用 OpenAI Chat Completions 结构，只在发 HTTP 前翻译成 Anthropic Messages。每次请求多一道转换，换来的是换模型供应商时只改 provider 一层，运行时和工具层完全无感知。</p>
+<div class="table-wrap"><table><tr><th><code>role: &quot;system&quot;</code></th><th>抽为请求体顶层 <code>system</code>，多条拼接</th><th><code>to_anthropic_messages</code></th></tr><tr><td>内部（OpenAI）</td><td>发送（Anthropic）</td><td>处理函数</td></tr><tr><td><code>assistant.tool_calls[]</code></td><td><code>tool_use</code> 内容块（带 id / name / input）</td><td>同上</td></tr><tr><td><code>role: &quot;tool&quot;</code></td><td>user 消息内的 <code>tool_result</code> 块</td><td>同上</td></tr><tr><td>连续多条 tool 结果</td><td>合并进同一条 user 消息</td><td>同上</td></tr><tr><td>相邻同角色消息</td><td>强制合并（Anthropic 要求严格交替）</td><td>同上</td></tr><tr><td><code>tools[].function</code></td><td><code>{name, description, input_schema}</code></td><td><code>to_anthropic_tools</code></td></tr><tr><td><code>stop_reason</code></td><td>end_turn/stop_sequence→stop，tool_use→tool_calls，max_tokens→length</td><td><code>_STOP_REASON_MAP</code></td></tr></table></div>
+<h3 id="3-2-重试-一个我踩过的坑">3.2 重试：一个我踩过的坑</h3>
+<p><strong>实现</strong>：退避序列 <code>_RETRY_DELAYS = (1, 2, 4, 8)</code>，最多 4 次重试。<code>_is_transient_error()</code> 按异常<strong>类型</strong>判定：<code>httpx.TimeoutException</code> 和 <code>TransportError</code> 一律算瞬时，<code>HTTPStatusError</code> 仅 429 或 ≥500 算瞬时。</p>
+<p>早期我是靠错误消息关键词匹配来判断能不能重试的，结果协作会议室总出现 <code>[LLM 调用失败: ]</code> 这种错误信息为空的情况。查下去才发现 httpx 的超时异常 <code>str(e)</code> 就是空字符串，所以它永远匹配不上任何关键词，被当成不可重试直接抛了。改成类型判定后这类失败基本消失。我同时加了 <code>_err_text()</code>，<code>str(e)</code> 为空时自动补上异常类名，不再让空错误流到前端。</p>
+<p>这个坑值得写出来：靠异常消息文本做控制流判断本身就不可靠，应该一开始就用类型。</p>
+<h3 id="3-3-并发闸">3.3 并发闸</h3>
+<p><strong>实现</strong>：模块级 <code>_LLM_SEMAPHORE = asyncio.Semaphore(LLM_CONCURRENCY)</code>，<code>chat()</code>、<code>chat_stream()</code> 和 <code>services/llm.py</code> 的 <code>chat_completion()</code> 共用同一个信号量。另外用 <code>_get_shared_client()</code> 复用一个 <code>httpx.AsyncClient</code> 连接池。</p>
+<p><strong>需要提醒看文档的人</strong>：这个值默认是 2，它直接制约了协作会议室的真实并行度。就算 <code>asyncio.gather</code> 同时发起 5 个子任务，实际也是在信号量处排队，更像两路流水线。这是我为了不碰上游限流主动接受的，配额升级后应该同步放开。</p>
+<h3 id="3-4-流式解析">3.4 流式解析</h3>
+<div class="table-wrap"><table><tr><th>事件</th><th>我的处理</th></tr><tr><td><code>content_block_start</code></td><td>若为 <code>tool_use</code>，记下该 index 的 id 与 name</td></tr><tr><td><code>content_block_delta</code> / <code>text_delta</code></td><td>逐 token 产出正文</td></tr><tr><td><code>content_block_delta</code> / <code>input_json_delta</code></td><td>按 index 累加 <code>partial_json</code></td></tr><tr><td><code>message_delta</code></td><td>读 <code>stop_reason</code> 与 usage</td></tr><tr><td><code>error</code></td><td>转异常走重试判定</td></tr></table></div>
+<p><strong>取舍</strong>：流式重试的边界我定在「是否已经向下游发过内容」。首个 chunk 产出前出错可以整次重试；已经发过内容再断就不重试了，宁可让用户看到一段不完整的回答，也不让他看到重复文本。</p>
+<p>另外 <code>_drop_malformed_tool_calls()</code> 会在写回历史前丢掉 name 缺失或非字符串的 tool_call——这东西一旦进了历史，后面每一轮请求都会被它污染。</p>
+<hr>
+<h2 id="四-Agent-运行时">四、Agent 运行时</h2>
+<h3 id="4-1-一次单聊请求走完的全链路">4.1 一次单聊请求走完的全链路</h3>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;sequence&quot;, &quot;participants&quot;: [{&quot;id&quot;: &quot;FE&quot;, &quot;label&quot;: &quot;前端&quot;}, {&quot;id&quot;: &quot;FD&quot;, &quot;label&quot;: &quot;frontdesk.py&quot;}, {&quot;id&quot;: &quot;DB&quot;, &quot;label&quot;: &quot;MySQL&quot;}, {&quot;id&quot;: &quot;CX&quot;, &quot;label&quot;: &quot;build_context&quot;}, {&quot;id&quot;: &quot;RG&quot;, &quot;label&quot;: &quot;ToolRegistry&quot;}, {&quot;id&quot;: &quot;AR&quot;, &quot;label&quot;: &quot;AgentRunner&quot;}], &quot;messages&quot;: [{&quot;fromIdx&quot;: 0, &quot;toIdx&quot;: 1, &quot;dashed&quot;: false, &quot;text&quot;: &quot;POST /api/frontdesk/chat（SSE）&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 1, &quot;dashed&quot;: false, &quot;text&quot;: &quot;分诊 _find_best_agent → _find_agent_by_repo → _llm_dispatch\n（单聊入口跳过分诊，直接指定员工）&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 2, &quot;dashed&quot;: false, &quot;text&quot;: &quot;_get_or_create_session + _save_message(user)，立即 commit&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 2, &quot;dashed&quot;: false, &quot;text&quot;: &quot;_load_role_pack_spec：工具白名单 / 权限 / 预算&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 3, &quot;dashed&quot;: false, &quot;text&quot;: &quot;build_context&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 3, &quot;toIdx&quot;: 1, &quot;dashed&quot;: true, &quot;text&quot;: &quot;history 最近 10 条（仅 user/assistant）\nskills 直绑优先否则走 RolePack\nrepos 由 AgentRepoBinding 展开\ndocs 上限 20 · budget 四维&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 4, &quot;dashed&quot;: false, &quot;text&quot;: &quot;build_tool_registry（白名单 + 仓库作用域 + 默认领域）&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 4, &quot;dashed&quot;: false, &quot;text&quot;: &quot;load_mcp_tools(stack, allowed_tools)\nstack 必须由调用方持有&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 5, &quot;dashed&quot;: false, &quot;text&quot;: &quot;execute_stream(...)&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 5, &quot;toIdx&quot;: 0, &quot;dashed&quot;: true, &quot;text&quot;: &quot;thinking / tool.start / tool.result / answer.chunk&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 5, &quot;toIdx&quot;: 1, &quot;dashed&quot;: true, &quot;text&quot;: &quot;answer.completed（可带 suggest_collab）&quot;, &quot;note&quot;: null}, {&quot;fromIdx&quot;: 1, &quot;toIdx&quot;: 2, &quot;dashed&quot;: false, &quot;text&quot;: &quot;_save_message(assistant)，立即 commit&quot;, &quot;note&quot;: null}], &quot;seed&quot;: 59}"></div></figure>
+<h3 id="4-2-ReAct-主循环">4.2 ReAct 主循环</h3>
+<p>这是整套系统的心脏，先看图：</p>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;TB&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;S&quot;, &quot;label&quot;: &quot;进入循环&quot;, &quot;shape&quot;: &quot;stadium&quot;}, {&quot;id&quot;: &quot;B&quot;, &quot;label&quot;: &quot;can_continue？\n步数 / 调用数 / token / 超时&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;FIN&quot;, &quot;label&quot;: &quot;finalize：追加收尾指令\ntools=None，max_tokens=8000\n再请求一次&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;CON&quot;, &quot;label&quot;: &quot;messages 超 32k token？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;CMP&quot;, &quot;label&quot;: &quot;Consolidator 压缩\n保留 system + 最近 6 条\n中间段摘要为 500 token&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;CALL&quot;, &quot;label&quot;: &quot;provider.chat_stream\n带上 registry.definitions&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;HAS&quot;, &quot;label&quot;: &quot;返回含 tool_calls？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;HB&quot;, &quot;label&quot;: &quot;hooks.before_execute_tools\nSecurityHook 可将参数改写为 _blocked&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;EX&quot;, &quot;label&quot;: &quot;registry.execute 逐个执行\n异常不上抛，转 ToolResult.error&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;HA&quot;, &quot;label&quot;: &quot;hooks.after_execute_tools\n截断 8000 字 + 脱敏 + 写 audit_log&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;APP&quot;, &quot;label&quot;: &quot;messages += assistant（tool_calls）+ tool 结果&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;EMP&quot;, &quot;label&quot;: &quot;正文为空？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;RT&quot;, &quot;label&quot;: &quot;空响应重试 &lt; 2？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;CLEAN&quot;, &quot;label&quot;: &quot;_strip_tool_name_spam 清洗&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;SHORT&quot;, &quot;label&quot;: &quot;清洗后不足 200 字？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;AGAIN&quot;, &quot;label&quot;: &quot;换更强指令再要一次\n取更长的那份&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;OUT&quot;, &quot;label&quot;: &quot;返回终答&quot;, &quot;shape&quot;: &quot;stadium&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;S&quot;, &quot;to&quot;: &quot;B&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;B&quot;, &quot;to&quot;: &quot;FIN&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;否&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;B&quot;, &quot;to&quot;: &quot;CON&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;CON&quot;, &quot;to&quot;: &quot;CMP&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;CON&quot;, &quot;to&quot;: &quot;CALL&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;否&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;CMP&quot;, &quot;to&quot;: &quot;CALL&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;CALL&quot;, &quot;to&quot;: &quot;HAS&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;HAS&quot;, &quot;to&quot;: &quot;HB&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;HB&quot;, &quot;to&quot;: &quot;EX&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;EX&quot;, &quot;to&quot;: &quot;HA&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;HA&quot;, &quot;to&quot;: &quot;APP&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;APP&quot;, &quot;to&quot;: &quot;B&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;HAS&quot;, &quot;to&quot;: &quot;EMP&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;否&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;EMP&quot;, &quot;to&quot;: &quot;RT&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;RT&quot;, &quot;to&quot;: &quot;CALL&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;RT&quot;, &quot;to&quot;: &quot;FIN&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;否&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;EMP&quot;, &quot;to&quot;: &quot;CLEAN&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;否&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;CLEAN&quot;, &quot;to&quot;: &quot;SHORT&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;SHORT&quot;, &quot;to&quot;: &quot;AGAIN&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;SHORT&quot;, &quot;to&quot;: &quot;OUT&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;否&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;AGAIN&quot;, &quot;to&quot;: &quot;OUT&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;FIN&quot;, &quot;to&quot;: &quot;OUT&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}], &quot;groups&quot;: [], &quot;seed&quot;: 72}"></div></figure>
+<p>对应的伪代码：</p>
+<pre class="code"><code>for iteration in range(budget.max_steps):
+    consolidator 检查是否需要压缩 messages
+    resp = provider.chat/chat_stream(messages, tools=registry.definitions)
+
+    if resp.tool_calls:
+        hooks.before_execute_tools()      # SecurityHook 可改写参数为 _blocked
+        for tc in tool_calls: registry.execute(tc)
+        hooks.after_execute_tools()       # 脱敏 + 审计
+        messages += [assistant(tool_calls), *tool_results]
+        continue
+
+    if 内容为空:
+        空响应重试（上限 _MAX_EMPTY_RETRIES = 2）
+
+    return 终答
+
+# 循环跑满仍未终答：
+finalize：追加收尾指令，tools=None、max_tokens=8000 再请求一次</code></pre>
+<p>几个我刻意定下的行为：</p>
+<ul>
+<li>工具抛异常不往上传，统一转 <code>ToolResult.error(...)</code> 回填给模型。模型看到错误信息自己会换一种调法，比直接中断强。</li>
+<li>预算耗尽不报错，而是走 finalize。用户宁可拿一段不完美的答案，不能拿一个错误页。</li>
+<li>终答先过 <code>_strip_tool_name_spam()</code> 清洗。</li>
+</ul>
+<h3 id="4-3-三个专门处理模型行为异常的补丁">4.3 三个专门处理模型行为异常的补丁</h3>
+<p>这三处都是被真实故障逼出来的，不是提前设计的：</p>
+<div class="table-wrap"><table><tr><th>finalize 轮已经 <code>tools=None</code> 了，GLM 还想调工具，就把工具名当正文重复输出几百次</th><th>正则 <code>([A-Za-z_][\w.-]*)(?:\s+\1){5,}</code> 匹配并截断，只匹配标识符形 token，避免误伤回答里的 ASCII 图</th><th><code>runner.py</code></th></tr><tr><td>现象</td><td>我的处理</td><td>位置</td></tr><tr><td>推理模型思考链吃满输出配额，正文为空</td><td><code>LLM_MAX_TOKENS</code> 提到 16384，结构化调用不低于 2000，并加空返回重试</td><td><code>config.py</code> / <code>runner.py</code></td></tr><tr><td>清洗完发现正文不足 200 字</td><td>换一条更强的指令再要一次，取更长的那份</td><td><code>runner.py</code></td></tr></table></div>
+<p><strong>说清楚一件事</strong>：这三个补丁是针对 glm-5.2 的具体行为的，不是通用能力。换模型时必须重新验证，尤其是那个正则——如果回答本身就包含重复标识符的代码片段，它是会误伤的。</p>
+<h3 id="4-4-预算模型">4.4 预算模型</h3>
+<div class="table-wrap"><table><tr><th>字段</th><th>默认值</th><th>加载自</th></tr><tr><td><code>max_steps</code></td><td>8</td><td><code>RolePack.spec.permission.budget.steps</code></td></tr><tr><td><code>max_calls</code></td><td>6</td><td><code>.calls</code></td></tr><tr><td><code>timeout_sec</code></td><td>60</td><td><code>.timeout</code></td></tr><tr><td><code>max_token</code></td><td>48000</td><td><code>.token</code></td></tr></table></div>
+<p>运行时用 <code>current_step</code> / <code>current_calls</code> / <code>current_token</code> 计数，统一由 <code>can_continue()</code> 判定。</p>
+<p><strong>已知不足</strong>：预算现在只拦截不反馈。模型不知道自己还剩几步，所以不会在剩一步时主动收束。把剩余预算写进每轮 system 提示是个成本很低的改进，我还没做。</p>
+<h3 id="4-5-System-Prompt-的组装">4.5 System Prompt 的组装</h3>
+<p>我把它分成 Stable 和 Volatile 两段，前者尽量不变以利于上游 prompt 缓存。</p>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;LR&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;S1&quot;, &quot;label&quot;: &quot;1 岗位身份&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S2&quot;, &quot;label&quot;: &quot;2 岗位职责&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S3&quot;, &quot;label&quot;: &quot;3 授权资源\n仓库由绑定关系动态渲染&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S4&quot;, &quot;label&quot;: &quot;4 AGENTS.md 原文\n截断 4000 字&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S5&quot;, &quot;label&quot;: &quot;5 可用工具描述表&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S6&quot;, &quot;label&quot;: &quot;6 技能摘要\n上限 10 条，只放 name+description&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S7&quot;, &quot;label&quot;: &quot;7 权限边界与执行预算&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S8&quot;, &quot;label&quot;: &quot;8 七条行动规则&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;S9&quot;, &quot;label&quot;: &quot;9 工具调用 few-shot&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;V1&quot;, &quot;label&quot;: &quot;已收集证据（最近 5 条）&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;V2&quot;, &quot;label&quot;: &quot;会话上下文提示&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;P&quot;, &quot;label&quot;: &quot;最终 System Prompt\n约 3000-6000 token（未实测）&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;SK&quot;, &quot;label&quot;: &quot;技能全文&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;S1&quot;, &quot;to&quot;: &quot;S2&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;S2&quot;, &quot;to&quot;: &quot;S3&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;S3&quot;, &quot;to&quot;: &quot;S4&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;S4&quot;, &quot;to&quot;: &quot;S5&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;S5&quot;, &quot;to&quot;: &quot;S6&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;S6&quot;, &quot;to&quot;: &quot;S7&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;S7&quot;, &quot;to&quot;: &quot;S8&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;S8&quot;, &quot;to&quot;: &quot;S9&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;V1&quot;, &quot;to&quot;: &quot;V2&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;ST&quot;, &quot;to&quot;: &quot;P&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;VO&quot;, &quot;to&quot;: &quot;P&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;SK&quot;, &quot;to&quot;: &quot;P&quot;, &quot;dotted&quot;: true, &quot;label&quot;: &quot;要时才拉 loadSkill&quot;, &quot;arrow&quot;: true}], &quot;groups&quot;: [{&quot;id&quot;: &quot;ST&quot;, &quot;label&quot;: &quot;Stable 段 · 尽量不变，利于缓存&quot;, &quot;members&quot;: [&quot;S1&quot;, &quot;S2&quot;, &quot;S3&quot;, &quot;S4&quot;, &quot;S5&quot;, &quot;S6&quot;, &quot;S7&quot;, &quot;S8&quot;, &quot;S9&quot;]}, {&quot;id&quot;: &quot;VO&quot;, &quot;label&quot;: &quot;Volatile 段 · 每次变&quot;, &quot;members&quot;: [&quot;V1&quot;, &quot;V2&quot;]}], &quot;seed&quot;: 85}"></div></figure>
+<p><strong>Stable 段</strong></p>
+<ol>
+<li>岗位身份：姓名、职称、部门、领域</li>
+<li>岗位职责</li>
+<li>授权资源：绑定仓库（<code>Repository.name</code> + <code>description</code> 动态渲染）+ 已上传文档清单（上限 20）</li>
+<li><code>AGENTS.md</code> 行为准则原文（截断 4000 字）</li>
+<li>可用工具描述表</li>
+<li>技能摘要：上限 10 条，只放 name + description；全文由 <code>loadSkill</code> 按需拉。只有 1 个技能且 instructions 不足 600 字时直接内联</li>
+<li>权限边界与执行预算</li>
+<li>七条行动规则：先查后答 / 工具优先 / 数据准确 / 领域边界 / 信息不足明确告知 / 回答详尽 / 整合加工</li>
+<li>工具调用 few-shot 示例</li>
+</ol>
+<p><strong>Volatile 段</strong></p>
+<ol>
+<li>已收集证据（最近 5 条）</li>
+<li>会话上下文提示</li>
+</ol>
+<p><strong>取舍</strong>：仓库清单我没写进 <code>AGENTS.md</code>，而是从绑定关系动态渲染。手写的清单一定会随着绑定变更而漂移，而模型完全依赖这份清单判断自己能查什么。同理，技能只放摘要也是为了控住 prompt 长度。按这个结构，一个绑 2 仓库、5 技能的员工大致在 3000–6000 token 量级，没实测过。</p>
+<h3 id="4-6-工具契约">4.6 工具契约</h3>
+<ul>
+<li><code>Tool</code> 抽象基类四要素：<code>name</code> / <code>description</code> / <code>parameters</code>（JSON Schema）/ <code>execute</code>。</li>
+<li><code>ToolResult</code> 直接继承 <code>str</code>，额外带 <code>is_error</code>。这样结果可以当字符串直接喂回模型，又不丢错误语义。</li>
+<li>并发属性：<code>read_only</code>（默认 True）、<code>exclusive</code>（默认 False）、<code>concurrency_safe = read_only and not exclusive</code>。</li>
+<li><code>ToolRegistry.prepare_call()</code> 三步：查表 → <code>_cast_params()</code> 字符串转 bool/int/float → <code>_validate_params()</code> 必填校验。</li>
+<li>工具不存在时我返回文本提示（附可用工具名）而不抛异常，让模型下一轮自己纠正。</li>
+<li>定义列表按 name 排序后缓存，顺序稳定才能命中 prompt 缓存。</li>
+</ul>
+<p><strong>已知不足</strong>：<code>concurrency_safe</code> 我定义了但还没用上，runner 目前是顺序执行工具的。</p>
+<h3 id="4-7-Hook-切面">4.7 Hook 切面</h3>
+<p><code>AgentHook</code> 基类给了三个钩子点：<code>before_execute_tools</code> / <code>after_execute_tools</code> / <code>after_iteration</code>。</p>
+<div class="table-wrap"><table><tr><th><code>SecurityHook</code></th><th>before</th><th><code>_check_injection()</code> 检测 <code>ignore previous</code>、<code>system:</code>、两种路径遍历写法，命中就把参数整体换成 <code>{_blocked: True, _reason: ...}</code>，runner 见到就跳过</th></tr><tr><td>Hook</td><td>时机</td><td>行为</td></tr><tr><td><code>SecurityHook</code></td><td>after</td><td>结果截断 8000 字；对 password/secret/token/api_key/apikey/access_key/private_key/credential 命中处，把其后 50 字符换成 <code>[REDACTED]</code></td></tr><tr><td><code>AuditHook</code></td><td>after</td><td>用独立 DB 会话写 <code>audit_log</code>：actor / action / target / detail / trace_id / decision</td></tr></table></div>
+<p><strong>已知不足（两处）</strong>：</p>
+<ol>
+<li>Hook 目前只在 <code>execute_stream</code> 挂载，非流式 <code>execute</code> 路径既没审计也没脱敏。这是一致性缺口，应该补上。</li>
+<li>注入检测是英文字符串黑名单，中文表述的越权指令、编码变形、以及从工具返回内容里来的间接注入都拦不住。我不把这层当安全边界，它的主要价值是审计留痕。真正的边界在下一节。</li>
+</ol>
+<hr>
+<h2 id="五-工具层">五、工具层</h2>
+<h3 id="5-1-业务工具">5.1 业务工具</h3>
+<div class="table-wrap"><table><tr><th><code>getEmployeeInfo</code></th><th><code>Agent</code> 及组织表</th><th>—</th></tr><tr><td><code>searchKnowledge</code></td><td><code>KnowledgeCandidate</code></td><td>SQL 侧状态过滤 + 领域双向包含，按 <code>created_at</code> 倒序取 5 条；Python 侧关键词过滤后取前 3 条；正文截 500 字</td></tr><tr><td>工具</td><td>数据来源</td><td>硬限制</td></tr><tr><td><code>searchResource</code></td><td><code>Resource</code></td><td>先名称命中，返回正文预览 2000 字；名称未命中则正文 LIKE，返回命中点前后各 150 字</td></tr><tr><td><code>loadSkill</code></td><td><code>Skill</code></td><td>按需返回全文</td></tr></table></div>
+<p>领域过滤用的是双向包含 <code>_domain_bidir_filter</code>，也就是 <code>domain.contains(d) OR literal(d).contains(domain)</code>，为的是让「后端」和「后端域」能互相匹配。</p>
+<p><code>searchResource</code> 里有一个防幻觉的处理：文档存在但正文读不出来时，我会显式回一段警告，要求模型不得根据文档名称或描述推测内容。加这段是因为我实测碰到过模型凭文件名把正文编出来。</p>
+<h3 id="5-2-代码工具">5.2 代码工具</h3>
+<div class="table-wrap"><table><tr><th><code>getProjectStructure</code></th><th>目录树 + 文件类型 Top5 + 技术栈推断</th><th>深度默认 2 上限 4；每层最多 15 项</th></tr><tr><td><code>listFiles</code></td><td>列文件（<code>pattern=&quot;*&quot;</code> 时只返回代码类扩展名）</td><td>默认 50，接口上限 200，展示 30</td></tr><tr><td><code>getCodeExcerpt</code></td><td>按行号区间读</td><td>超 500KB 拒绝；默认 1–50 行</td></tr><tr><td><code>searchCode</code></td><td>遍历仓库逐行子串匹配（大小写不敏感）</td><td>跳 <code>.git</code>、跳二进制、跳超 200KB 文件；默认 <code>max_results=20</code>，展示上限 15</td></tr><tr><td>工具</td><td>行为</td><td>限制</td></tr><tr><td><code>searchInDocs</code></td><td>只在文档类扩展名里搜</td><td>14 种扩展名白名单；超 200KB 跳过；命中 15、展示 10</td></tr><tr><td><code>cloneRepo</code></td><td>唯一写工具，<code>read_only=False</code> 且 <code>exclusive=True</code></td><td>超时 300s；成功后补写 <code>Repository</code> 表让它进入绑定体系，写表失败会 rollback 但不影响 clone 结果</td></tr></table></div>
+<p>技术栈推断是阈值启发式：<code>.py</code> 超 3 判 Python，<code>.java</code> 超 3 判 Java，<code>.js+.ts+.tsx</code> 超 3 判 JS/TS，<code>.vue</code> 有就判 Vue，<code>.go</code> 有就判 Go。不解析依赖清单，够用就行。</p>
+<h3 id="5-3-作用域收敛-我认为这是系统里最重要的一个设计">5.3 作用域收敛：我认为这是系统里最重要的一个设计</h3>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;TB&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;A&quot;, &quot;label&quot;: &quot;模型发起代码类工具调用&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;B&quot;, &quot;label&quot;: &quot;allowed_repos 为空？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;C&quot;, &quot;label&quot;: &quot;不限制\n总前台自答 / 未绑定员工保持全局检索&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;D&quot;, &quot;label&quot;: &quot;传了 repo_id 吗？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;E&quot;, &quot;label&quot;: &quot;有 default_repo？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;F&quot;, &quot;label&quot;: &quot;自动填入默认仓库&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;G&quot;, &quot;label&quot;: &quot;返回提示，列出可访问仓库&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;H&quot;, &quot;label&quot;: &quot;在白名单内？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;I&quot;, &quot;label&quot;: &quot;正常执行&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;J&quot;, &quot;label&quot;: &quot;返回 ToolResult.ok 纠错提示\n引导改用授权仓库（不用 error）&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;T1&quot;, &quot;label&quot;: &quot;工具描述&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;T2&quot;, &quot;label&quot;: &quot;参数 schema（_repo_param_schema）&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;T3&quot;, &quot;label&quot;: &quot;执行期校验（_resolve_repo）&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;A&quot;, &quot;to&quot;: &quot;B&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;B&quot;, &quot;to&quot;: &quot;C&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;B&quot;, &quot;to&quot;: &quot;D&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;否&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;D&quot;, &quot;to&quot;: &quot;E&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;没传&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;E&quot;, &quot;to&quot;: &quot;F&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;有&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;E&quot;, &quot;to&quot;: &quot;G&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;没有&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;D&quot;, &quot;to&quot;: &quot;H&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;传了&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;H&quot;, &quot;to&quot;: &quot;I&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;在&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;H&quot;, &quot;to&quot;: &quot;J&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;不在&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;F&quot;, &quot;to&quot;: &quot;I&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}], &quot;groups&quot;: [{&quot;id&quot;: &quot;TRI&quot;, &quot;label&quot;: &quot;同一份授权信息出现在三处&quot;, &quot;members&quot;: [&quot;T1&quot;, &quot;T2&quot;, &quot;T3&quot;]}], &quot;seed&quot;: 98}"></div></figure>
+<p><code>_RepoScopeMixin</code> 在工具<strong>实例化时</strong>就注入 <code>allowed_repos</code> 与 <code>default_repo</code>，<code>_resolve_repo()</code> 三条分支：</p>
+<ol>
+<li><code>allowed_repos</code> 为空 → 不限制（总前台自答、未绑定员工保持全局检索）</li>
+<li>没传 <code>repo_id</code> 但有 <code>default_repo</code> → 自动填；没默认仓库就返回提示，列出可访问仓库</li>
+<li><code>repo_id</code> 不在白名单 → 返回一条纠错提示，引导它改用授权仓库</li>
+</ol>
+<p>同时 <code>_repo_param_schema()</code> 会把当前授权仓库写进参数描述，<code>_required_with_repo()</code> 在有默认仓库时把 <code>repo_id</code> 从必填里拿掉。授权信息同时出现在工具描述、参数 schema、执行期校验三个地方。</p>
+<p><strong>取舍</strong>：越权时我返回的是 <code>ToolResult.ok(...)</code> 而不是 <code>error</code>。错误会消耗模型的容错预算，甚至让它直接放弃；提示则能让它在同一轮里改用正确仓库。代价是「越权」这个事实不会被标记为异常，审计里看不到 DENY。这一点我需要再确认一下 <code>AuditHook</code> 当前是怎么记的。</p>
+<h3 id="5-4-MCP-集成">5.4 MCP 集成</h3>
+<ul>
+<li>用官方 <code>mcp</code> 包的 SSE transport，支持自定义 headers 鉴权。</li>
+<li><code>Tool</code> 表一行 = 一个 MCP Server，筛选条件 <code>type=&#x27;mcp&#x27; AND state=&#x27;APPROVED&#x27; AND name IN allowed_tools</code>。白名单里出现 server 名就启用它全部远端工具，粒度到 server 不到单个工具。</li>
+<li>工具名加 <code>mcp__&lt;server&gt;__&lt;tool&gt;</code> 前缀，非法字符用 <code>_FN_NAME_RE</code> 清掉，总长截 64，满足 <code>^[a-zA-Z0-9_-]{1,64}$</code>。</li>
+<li><strong>会话生命周期</strong>：<code>load_mcp_tools(stack, ...)</code> 内部绝不自建 <code>async with</code>，会话必须由调用方传入的 <code>AsyncExitStack</code> 持有，且该 stack 要覆盖整个流式消费过程。否则 <code>list_tools</code> 一返回会话就关了，后面 <code>call_tool</code> 全打在死会话上。这是接 MCP 时最容易踩的坑，单拿出来提一句。</li>
+<li>单个 server 连不上只记日志跳过，不拖垮整场对话。</li>
+<li><code>MCPTool.read_only = False</code>：远端语义未知，我保守取值。代价是它们都不具备 <code>concurrency_safe</code>，将来做工具并发时会受限。</li>
+</ul>
+<hr>
+<h2 id="六-检索-RAG">六、检索（RAG）</h2>
+<h3 id="6-1-先把话说明白">6.1 先把话说明白</h3>
+<p>这套系统<strong>没有向量库，也没有 embedding 调用</strong>。检索完全由模型在 ReAct 循环里主动调工具完成，匹配方式是 SQL <code>LIKE</code> 和 Python 子串比较。叫它 RAG 不太准确，准确的说法是 <strong>Agentic 检索 + 关键词匹配</strong>。</p>
+<h3 id="6-2-四条检索路径">6.2 四条检索路径</h3>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;LR&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;M&quot;, &quot;label&quot;: &quot;模型在 ReAct 循环里自己决定查不查、查几次&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;K&quot;, &quot;label&quot;: &quot;searchKnowledge&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R&quot;, &quot;label&quot;: &quot;searchResource&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;C&quot;, &quot;label&quot;: &quot;searchCode&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;DD&quot;, &quot;label&quot;: &quot;searchInDocs&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;K1&quot;, &quot;label&quot;: &quot;SQL 状态+领域过滤\n→ created_at 倒序取 5 条\n→ 内存子串过滤 → 3 条 × 500 字&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R1&quot;, &quot;label&quot;: &quot;先名称命中（2000 字预览）\n否则正文 LIKE（前后各 150 字）&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;C1&quot;, &quot;label&quot;: &quot;全仓库 rglob 逐行匹配\n跳 .git / 二进制 / 超 200KB\n→ 15 处 × 200 字&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;D1&quot;, &quot;label&quot;: &quot;限 14 种文档扩展名\n命中 15 · 展示 10&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;W&quot;, &quot;label&quot;: &quot;❗ 已知不足：先取 5 条再过滤\n第 6 条及更早的知识永远召不回&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;M&quot;, &quot;to&quot;: &quot;K&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;M&quot;, &quot;to&quot;: &quot;R&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;M&quot;, &quot;to&quot;: &quot;C&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;M&quot;, &quot;to&quot;: &quot;DD&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;K&quot;, &quot;to&quot;: &quot;K1&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;R&quot;, &quot;to&quot;: &quot;R1&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;C&quot;, &quot;to&quot;: &quot;C1&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;DD&quot;, &quot;to&quot;: &quot;D1&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;K1&quot;, &quot;to&quot;: &quot;W&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}], &quot;groups&quot;: [], &quot;seed&quot;: 111}"></div></figure>
+<div class="table-wrap"><table><tr><th>知识库</th><th>SQL 状态+领域过滤 → 取最近 5 条 → 内存子串过滤</th><th><code>created_at</code> 倒序（不是相关性）</th><th>3 条 × 500 字</th></tr><tr><td>路径</td><td>召回算法</td><td>排序依据</td><td>截断</td></tr><tr><td>资源文档</td><td>名称命中，失败降级为正文 LIKE</td><td>无显式排序</td><td>2000 字预览或 150+150 字片段</td></tr><tr><td>代码</td><td>全仓库遍历逐行匹配</td><td>文件遍历顺序（不是相关性）</td><td>15 处 × 200 字/行</td></tr><tr><td>仓库文档</td><td>同上，限定文档扩展名</td><td>同上</td><td>15 处，展示 10</td></tr></table></div>
+<p><strong>已知不足（我认为是当前最应该先修的一个）</strong>：知识库检索是先按时间取 5 条、再做关键词过滤，而不是先过滤再排序取 top-k。后果是一旦某个领域下已审核知识超过 5 条，第 6 条及更早的在任何关键词下都召不回来。这不是范式选择的问题，就是逻辑顺序写反了，改回来十行代码的事。</p>
+<h3 id="6-3-代码检索的成本">6.3 代码检索的成本</h3>
+<p><code>search_in_repo</code> 是 Python 层的 <code>rglob</code> + 逐行遍历，无索引无缓存。另外 <code>_attach_authors()</code> 会为结果里<strong>每个唯一文件</strong>额外跑两次 <code>git log</code> 子进程（创建人一次、最后修改人一次），带 15 秒超时。</p>
+<p>加作者信息是为了回答「这文件谁写的」这类问题，产品上确实有用。但实现上我现在是对每个命中文件都查，而且走的是同步子进程，这两点都应该改。</p>
+<h3 id="6-4-与其他检索范式的机制差异">6.4 与其他检索范式的机制差异</h3>
+<div class="table-wrap"><table><tr><th>多跳问题</th><th>可多轮迭代</th><th>单轮，需额外设计</th><th>单轮</th><th>图遍历原生支持</th><th>依赖模型</th></tr><tr><td>精确标识符</td><td>直接命中</td><td>看分词与模型</td><td>能命中</td><td>一般</td><td>不适用</td></tr><tr><td>同义词查询</td><td>命中不了</td><td>能命中</td><td>能命中</td><td>能命中</td><td>不适用</td></tr><tr><td>匹配原理</td><td>字面子串</td><td>向量近邻</td><td>词频 + 向量加权</td><td>实体关系图遍历</td><td>无</td></tr><tr><td>触发方式</td><td>模型自己决定查不查、查几次</td><td>每次提问固定前置检索</td><td>同向量 RAG</td><td>同向量 RAG</td><td>无检索</td></tr><tr><td>维度</td><td>本项目</td><td>向量 RAG</td><td>混合检索</td><td>GraphRAG</td><td>长上下文直塞</td></tr><tr><td>索引构建</td><td>无</td><td>需切块+向量化</td><td>需两套索引</td><td>需实体抽取与建图</td><td>无</td></tr><tr><td>内容更新延迟</td><td><code>git pull</code> 后立即生效</td><td>需重建索引</td><td>需重建索引</td><td>需重建图</td><td>无</td></tr><tr><td>单次查询成本</td><td>多轮 LLM 调用，token 高</td><td>1 次检索，token 低</td><td>低</td><td>中</td><td>输入 token 极高</td></tr><tr><td>结果可追溯</td><td>工具链与文件行号可见</td><td>相似度分数</td><td>同左</td><td>路径可见</td><td>不可追溯</td></tr><tr><td>主要失效模式</td><td>用户用了文档里没有的说法</td><td>语义相近但答案错的片段</td><td>权重调参</td><td>建图质量</td><td>长上下文信息遗漏</td></tr></table></div>
+<p><strong>我的判断，分两个场景说</strong>：</p>
+<ul>
+<li><strong>代码问答</strong>：字面匹配在这里确实合适。找 <code>createOrder</code>，grep 比 embedding 准，而且仓库一 pull 就生效，不用维护索引。当前的短板不在范式，在无索引的耗时。</li>
+<li><strong>业务知识问答</strong>：字面匹配的短板很明显。用户不会用和知识条目一模一样的措辞，而知识库条目本来就少（因为要过人工审核），两相叠加召回失败率高。这块是我接下来要动的。</li>
+</ul>
+<h3 id="6-5-我的改进计划">6.5 我的改进计划</h3>
+<div class="table-wrap"><table><tr><th>优先级</th><th>改进</th><th>预估改动</th></tr><tr><td>1</td><td>知识库改为「SQL 带关键词条件全表过滤 → 排序 → top-k」</td><td>十行内</td></tr><tr><td>2</td><td>代码检索改走 <code>git grep</code> 或 ripgrep 子进程</td><td>单函数</td></tr><tr><td>3</td><td><code>_attach_authors</code> 改异步，且只对展示的前 N 条富化</td><td>单函数</td></tr><tr><td>4</td><td>知识库加 MySQL 全文索引（ngram 分词器支持中文），现有过滤作兜底</td><td>需 DDL 变更</td></tr><tr><td>5</td><td>引入轻量向量检索做混合召回</td><td>新依赖，待评估</td></tr><tr><td>6</td><td>把 <code>commit_sha</code> 锁定真正用起来（<code>AgentContext</code> 预留了字段但检索结果还没与具体 commit 绑定）</td><td>中等</td></tr></table></div>
+<hr>
+<h2 id="七-记忆-Memory">七、记忆（Memory）</h2>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;TB&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;W&quot;, &quot;label&quot;: &quot;内存 messages[]\n包含完整工具轨迹&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;EV&quot;, &quot;label&quot;: &quot;AgentContext.evidence_cards&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;MSG&quot;, &quot;label&quot;: &quot;Message 表\nrole / content / evidence_ids / feedback&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;KC&quot;, &quot;label&quot;: &quot;KnowledgeCandidate 表\n人工提交 + 人工审核&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;N1&quot;, &quot;label&quot;: &quot;❗ 压缩结果不写回数据库&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;N2&quot;, &quot;label&quot;: &quot;❗ 10 条上限硬编码，超出无声丢失&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;W&quot;, &quot;to&quot;: &quot;W&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;超 32k token 触发压缩\n保留 system + 最近 6 条\n中间段摘要 500 token&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;W&quot;, &quot;to&quot;: &quot;MSG&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;只持久化 user / assistant 正文\n工具轨迹丢弃&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;MSG&quot;, &quot;to&quot;: &quot;W&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;下次请求取最近 10 条反转为正序&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;KC&quot;, &quot;to&quot;: &quot;W&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;只有 APPROVED 参与检索&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;N1&quot;, &quot;to&quot;: &quot;W&quot;, &quot;dotted&quot;: true, &quot;label&quot;: null, &quot;arrow&quot;: false}, {&quot;from&quot;: &quot;N2&quot;, &quot;to&quot;: &quot;MSG&quot;, &quot;dotted&quot;: true, &quot;label&quot;: null, &quot;arrow&quot;: false}], &quot;groups&quot;: [{&quot;id&quot;: &quot;SHORT&quot;, &quot;label&quot;: &quot;短期 · 单次请求内&quot;, &quot;members&quot;: [&quot;W&quot;, &quot;EV&quot;]}, {&quot;id&quot;: &quot;MID&quot;, &quot;label&quot;: &quot;中期 · 单会话&quot;, &quot;members&quot;: [&quot;MSG&quot;]}, {&quot;id&quot;: &quot;LONG&quot;, &quot;label&quot;: &quot;长期 · 全局&quot;, &quot;members&quot;: [&quot;KC&quot;]}], &quot;seed&quot;: 124}"></div></figure>
+<h3 id="7-1-四类状态的载体">7.1 四类状态的载体</h3>
+<div class="table-wrap"><table><tr><th>类型</th><th>载体</th><th>作用域</th><th>持久化</th></tr><tr><td>会话历史</td><td><code>Message</code> 表</td><td>单 <code>session_id</code></td><td>是</td></tr><tr><td>本轮工作记忆</td><td>内存 <code>messages[]</code></td><td>单次 ReAct 循环</td><td>否</td></tr><tr><td>证据卡</td><td><code>AgentContext.evidence_cards</code></td><td>单次请求</td><td>否（<code>Message.evidence_ids</code> 有字段）</td></tr><tr><td>长期知识</td><td><code>KnowledgeCandidate</code> 表</td><td>全局</td><td>是</td></tr></table></div>
+<p><code>Message</code> 表字段：<code>id</code>、<code>session_id</code>、<code>role</code>、<code>content</code>、<code>agent_id</code>、<code>evidence_ids</code>(JSON)、<code>confidence</code>、<code>feedback</code>（up/down/空）、<code>created_at</code>。</p>
+<p>历史装配：<code>build_context</code> 按 <code>session_id</code> 查、<code>created_at</code> 倒序取 <code>history_limit</code>（默认 10）条后反转为正序，只注入 user 和 assistant。</p>
+<p><strong>这个选择带来三个后果，看文档的人需要知道</strong>：</p>
+<ol>
+<li>工具调用轨迹不进下一轮上下文。模型第 N 轮查到的东西，第 N+1 轮只能靠自己上一条回答的文本回忆，看不到原始工具返回。多轮追问时它会重复检索。</li>
+<li>10 条上限是硬编码的，不随岗位包变。超过 10 轮必然丢早期信息，而且丢得惄无声息。</li>
+<li><code>Message.role</code> 允许 <code>system</code>，但注入时被我过滤掉了。</li>
+</ol>
+<p>第 1 和第 2 都是已知不足，<code>history_limit</code> 应该做成岗位包可配，工具轨迹至少应该以摘要形式保留。</p>
+<h3 id="7-2-上下文压缩">7.2 上下文压缩</h3>
+<div class="table-wrap"><table><tr><th>触发阈值</th><th><code>max_tokens = 32000</code></th></tr><tr><td>token 估算</td><td><code>estimate_tokens()</code>：中文字符 ×2，其他 ×0.3，每条 +4。纯启发式，不调 tokenizer</td></tr><tr><td>环节</td><td>实现</td></tr><tr><td>分区</td><td>system 全保留；最近 <code>_KEEP_RECENT = 6</code> 条全保留；中间部分送压缩</td></tr><tr><td>压缩</td><td>调 LLM 生成摘要，<code>_SUMMARY_MAX_TOKENS = 500</code>，<code>temperature = 0.1</code></td></tr><tr><td>注入</td><td>摘要作为一条消息插回，前缀 <code>[consolidated] </code></td></tr><tr><td>失败降级</td><td>不重试不报错，改成每条截断至 200 字并附 <code>...[truncated]</code></td></tr></table></div>
+<p><strong>取舍</strong>：压缩本身也要调 LLM，而调 LLM 就可能失败。我宁可在失败时退化成笨办法（截断），也不让整个对话因为压缩失败而中断。</p>
+<p><strong>补充两点</strong>：一是压缩发生在 runner 循环内、作用于内存的 <code>messages[]</code>，<strong>结果不写回数据库</strong>，下次请求仍从 <code>Message</code> 表重新拉原文。二是「中文 ×2」这个估算偏保守，会让压缩比实际需要更早触发；但因为会话历史本来只有 10 条，32000 在单聊里很难达到，压缩实际主要在工具返回体积大的时候生效。</p>
+<h3 id="7-3-长期记忆-我选了人工审核制">7.3 长期记忆：我选了人工审核制</h3>
+<p><code>KnowledgeCandidate</code> 的治理态机是 <code>SUBMITTED → IN_REVIEW → APPROVED / REJECTED → EXPIRED</code>，字段含 <code>body_md</code>、<code>evidence_ids</code>、<code>commit_sha</code>、<code>expires_at</code>、<code>scope</code>（PROJECT/DEPARTMENT/COMPANY）、<code>confidence</code>、<code>conflict_warning</code>。检索工具只查已通过审核的条目。</p>
+<p><strong>取舍</strong>：系统里没有任何自动沉淀路径，Agent 不会把对话结论自动写成知识。这是我故意的。企业内部知识一旦沉淀错了，后面所有人都会被误导，而且很难发现。我宁愿知识库长得慢一点。</p>
+<p>代价也很实在：沉淀速度完全取决于人工。如果审核环节没人做，长期记忆就是空的，系统会退化成「每次都从代码里现查」。这套机制能不能成立，依赖的是配套的审核工作流，不单是代码问题。</p>
+<p><strong>需要再确认</strong>：<code>routers/knowledge.py</code> 的列表接口按 <code>status</code> 过滤，取值是 <code>published</code> / <code>pending_review</code> / <code>expired</code>，和检索工具用的 <code>state = APPROVED</code> 不是一套口径。可能是两个独立字段（治理态 + 展示态），也可能是我早期遗留的不一致。如果是后者，会出现「知识管理页显示已发布、Agent 却检索不到」这种很难排查的现象。我会先把这个核完。</p>
+<h3 id="7-4-与其他记忆方案的机制差异">7.4 与其他记忆方案的机制差异</h3>
+<div class="table-wrap"><table><tr><th>维度</th><th>本项目</th><th>LangChain BufferWindow</th><th>LangChain SummaryBuffer</th><th>MemGPT / Letta</th><th>Mem0 / Zep</th></tr><tr><td>短期窗口</td><td>固定 10 条，硬编码</td><td>固定 k 条</td><td>固定 token 预算</td><td>主上下文分页</td><td>滑窗</td></tr><tr><td>含工具轨迹</td><td>否</td><td>是（看配置）</td><td>是</td><td>是</td><td>视实现</td></tr><tr><td>压缩时机</td><td>超 32k token</td><td>不压缩</td><td>超预算即摘要</td><td>上下文将满时换出</td><td>异步抽取</td></tr><tr><td>压缩结果持久化</td><td>否</td><td>—</td><td>否</td><td>是</td><td>是</td></tr><tr><td>长期记忆写入</td><td>人工提交 + 人工审核</td><td>无</td><td>无</td><td>模型自主写入</td><td>自动抽取事实</td></tr><tr><td>长期记忆召回</td><td>关键词检索工具</td><td>—</td><td>—</td><td>模型主动检索</td><td>向量召回</td></tr><tr><td>跨会话延续</td><td>仅通过已审核知识</td><td>无</td><td>无</td><td>有</td><td>有</td></tr><tr><td>用户级画像</td><td>无（<code>user_id</code> 默认 <code>guest</code>）</td><td>无</td><td>无</td><td>有</td><td>有</td></tr><tr><td>错误信息扩散风险</td><td>低</td><td>不适用</td><td>不适用</td><td>较高</td><td>较高</td></tr><tr><td>知识沉淀吞吐</td><td>受人工限制</td><td>—</td><td>—</td><td>高</td><td>高</td></tr></table></div>
+<hr>
+<h2 id="八-规划-Plan">八、规划（Plan）</h2>
+<p>我写了三套规划机制，两套在生产路径上。</p>
+<h3 id="8-1-请求级-三级分诊链">8.1 请求级：三级分诊链</h3>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;TB&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;Q&quot;, &quot;label&quot;: &quot;用户提问&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;L1&quot;, &quot;label&quot;: &quot;L1 _find_best_agent\n_KEYWORD_MAP 命中？\n0 次 LLM&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;A&quot;, &quot;label&quot;: &quot;确定员工&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;L2&quot;, &quot;label&quot;: &quot;L2 _find_agent_by_repo\n出现仓库名？长名优先\n0 次 LLM&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;L3&quot;, &quot;label&quot;: &quot;L3 _llm_dispatch\ntemperature=0.1 max_tokens=2000\n空返重试 1 次，1-2 次 LLM&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;F&quot;, &quot;label&quot;: &quot;总前台自答\n给全部内置工具 + 所有 APPROVED 的 MCP&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;MD&quot;, &quot;label&quot;: &quot;_match_domains 数领域个数&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;C&quot;, &quot;label&quot;: &quot;≥ 2 个领域？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;SG&quot;, &quot;label&quot;: &quot;answer.completed 带 suggest_collab\n前端提示转协作任务&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;N&quot;, &quot;label&quot;: &quot;❗ L1 命中即返回，误命中时 L2/L3 无机会纠正&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;Q&quot;, &quot;to&quot;: &quot;L1&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L1&quot;, &quot;to&quot;: &quot;A&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;命中&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L1&quot;, &quot;to&quot;: &quot;L2&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;未命中&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L2&quot;, &quot;to&quot;: &quot;A&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;命中&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L2&quot;, &quot;to&quot;: &quot;L3&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;未命中&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L3&quot;, &quot;to&quot;: &quot;A&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;输出 agent_id&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;L3&quot;, &quot;to&quot;: &quot;F&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;都未命中&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;A&quot;, &quot;to&quot;: &quot;MD&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;MD&quot;, &quot;to&quot;: &quot;C&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;C&quot;, &quot;to&quot;: &quot;SG&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;N&quot;, &quot;to&quot;: &quot;L1&quot;, &quot;dotted&quot;: true, &quot;label&quot;: null, &quot;arrow&quot;: false}], &quot;groups&quot;: [], &quot;seed&quot;: 137}"></div></figure>
+<div class="table-wrap"><table><tr><th>级别</th><th>函数</th><th>机制</th><th>LLM 调用</th></tr><tr><td>L1</td><td><code>_find_best_agent</code></td><td>关键词表 <code>_KEYWORD_MAP</code> 映射领域（产品/架构/后端/前端/测试/管理/通用）</td><td>0 次</td></tr><tr><td>L2</td><td><code>_find_agent_by_repo</code></td><td>问题里出现仓库名 → 反查 <code>AgentRepoBinding</code>，长名优先</td><td>0 次</td></tr><tr><td>L3</td><td><code>_llm_dispatch</code></td><td>员工列表（含 repos、skills）拼进 prompt，要求输出 <code>{agent_id, reason}</code>；<code>temperature=0.1</code>、<code>max_tokens=2000</code>；空返重试 1 次；<code>extract_llm_json</code> 容错剥围栏</td><td>1–2 次</td></tr><tr><td>兜底</td><td>—</td><td>都没命中就总前台自答，此时给全部内置工具 + 所有 APPROVED 的 MCP Server</td><td>—</td></tr></table></div>
+<p>另外 <code>_match_domains</code> 会数问题涉及几个领域，≥2 个时在 <code>answer.completed</code> 里带上 <code>suggest_collab</code>，前端据此提示用户转协作任务。</p>
+<p><strong>取舍</strong>：便宜的先跑，昂贵的兜底。大多数问题在 L1/L2 就完事了，不用为分诊多花一次 LLM 调用。</p>
+<p><strong>已知不足</strong>：L1 的关键词表是硬编码中文词表，新增领域得改代码；而且它优先级最高，一旦误命中（比如「前端接口怎么调」里的「接口」命中后端域），L2/L3 没有机会纠正。把 L1 从「命中即返回」降为「候选打分」可以缓解，代价是必然要跑 L3。</p>
+<h3 id="8-2-任务级-协作会议室">8.2 任务级：协作会议室</h3>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;TB&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;IN&quot;, &quot;label&quot;: &quot;任务标题 + 描述 + deadline_minutes&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R0&quot;, &quot;label&quot;: &quot;[0] 预留时间\nreserve_sec = min(90, deadline × 0.1)&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;P&quot;, &quot;label&quot;: &quot;[1] Plan · _decompose_task\ntemperature=0.2 max_tokens=4000\n护栏：agent_id 必在有效集内 · 数量截至 5 · confidence 白名单&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R1&quot;, &quot;label&quot;: &quot;[2] Round 1 · 并行草案\nasyncio.gather · 完整 ReAct\nsession=task-id · history_limit=0\n时间预算 55%&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;ST1&quot;, &quot;label&quot;: &quot;按时交付？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;SUB&quot;, &quot;label&quot;: &quot;状态 analyzing → submitted&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;CLA&quot;, &quot;label&quot;: &quot;状态 clarify（未交付）&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;CK&quot;, &quot;label&quot;: &quot;草案 ≥ 2 份？&quot;, &quot;shape&quot;: &quot;diamond&quot;}, {&quot;id&quot;: &quot;SY&quot;, &quot;label&quot;: &quot;[4] Synth · _synthesize_doc\ntemperature=0.3 max_tokens=16000\n固定六章节&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;R2&quot;, &quot;label&quot;: &quot;[3] Round 2 · _run_discussion\n全部草案可见（单份截 6000 字）\nsession=task-id-r2 · 时间预算 35%&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;DIS&quot;, &quot;label&quot;: &quot;submitted → discussing → discussed&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;BACK&quot;, &quot;label&quot;: &quot;回退 submitted\n绝不覆写 subtask_detail&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;FB&quot;, &quot;label&quot;: &quot;_fallback_doc 代码拼接兜底&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;SM&quot;, &quot;label&quot;: &quot;[5] Summary · _summarize ≤200 字\n首行强制 ✅ 或 ⚠️\n冲突逐条列出，禁止淡化&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;OUT&quot;, &quot;label&quot;: &quot;落盘 workspaces/collab_docs/\n写入 TaskCard.result_doc_path 与 conflict_note&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;IN&quot;, &quot;to&quot;: &quot;R0&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;R0&quot;, &quot;to&quot;: &quot;P&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;P&quot;, &quot;to&quot;: &quot;R1&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;R1&quot;, &quot;to&quot;: &quot;ST1&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;ST1&quot;, &quot;to&quot;: &quot;SUB&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;ST1&quot;, &quot;to&quot;: &quot;CLA&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;超时&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;SUB&quot;, &quot;to&quot;: &quot;CK&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;CK&quot;, &quot;to&quot;: &quot;SY&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;否&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;CK&quot;, &quot;to&quot;: &quot;R2&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;是&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;R2&quot;, &quot;to&quot;: &quot;DIS&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;成功&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;R2&quot;, &quot;to&quot;: &quot;BACK&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;失败&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;DIS&quot;, &quot;to&quot;: &quot;SY&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;BACK&quot;, &quot;to&quot;: &quot;SY&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;CLA&quot;, &quot;to&quot;: &quot;SY&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;SY&quot;, &quot;to&quot;: &quot;FB&quot;, &quot;dotted&quot;: false, &quot;label&quot;: &quot;失败&quot;, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;SY&quot;, &quot;to&quot;: &quot;SM&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;FB&quot;, &quot;to&quot;: &quot;SM&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;SM&quot;, &quot;to&quot;: &quot;OUT&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}], &quot;groups&quot;: [], &quot;seed&quot;: 150}"></div></figure>
+<pre class="code"><code>输入：任务标题 + 描述 + deadline_minutes
+
+[0] 预留时间   reserve_sec = min(90, deadline * 0.1)
+
+[1] Plan       _decompose_task
+                 LLM 输出 {&quot;subtasks&quot;:[{agent_id,title,detail,confidence}]}
+                 temperature=0.2, max_tokens=4000
+                 护栏：agent_id 必须在有效员工集合内
+                       数量截断至 5
+                       confidence 只接受白名单取值
+
+[2] Round 1    _run_subtask × N，asyncio.gather 并行
+                 每个子任务跑完整 ReAct，可调全部授权工具
+                 独立 session_id = &quot;task-{id}&quot;，history_limit = 0
+                 时间预算 = 总时长 × 55%，asyncio.wait_for 包裹
+                 状态：analyzing → submitted；超时未交付 → clarify
+
+[3] Round 2    _run_discussion，触发条件：草案 ≥ 2 份
+                 每人可见全部草案（单份截 6000 字），站在本岗位互评
+                 独立 session_id = &quot;task-{id}-r2&quot;
+                 时间预算 = 总时长 × 35%
+                 状态：submitted → discussing → discussed
+                 失败 → 回退 submitted，绝不覆写 subtask_detail
+
+[4] Synth      _synthesize_doc，temperature=0.3, max_tokens=16000
+                 固定六章节：任务背景与目标 / 总体方案 / 各部门要点与衔接
+                             / 分歧点与裁决 / 风险与待确认 / 行动清单与分工
+                 LLM 失败 → _fallback_doc 用代码拼接草案兜底
+                 产物落盘 workspaces/collab_docs/，路径写入 TaskCard.result_doc_path
+
+[5] Summary    _summarize，≤200 字
+                 首行强制 ✅（无冲突）或 ⚠️（有冲突/未交付）
+                 prompt 要求冲突逐条显式列出，禁止合并淡化
+                 写入 TaskCard.conflict_note</code></pre>
+<p><strong>重试机制</strong>：<code>_run_agent_question_with_retry</code> 把两种情况都当失败并整轮重试——输出为空，或输出命中 <code>_LLM_FAIL_MARKERS = (&quot;[LLM 调用失败&quot;, &quot;[LLM 重试耗尽]&quot;)</code>。退避 3 秒、8 秒，<code>max_retries = 2</code>。<code>CancelledError</code> 直接上抛，不参与重试。</p>
+<p><strong>取舍</strong>：<code>TaskAssignment</code> 里我把草案（<code>subtask_detail</code>）和互评（<code>discussion_note</code>）分了两列。这样第二轮无论怎么失败，第一轮的成果都不会被覆写。多 Agent 流程里最让人难受的就是后面一环报错把前面跑出来的东西也带没了。</p>
+<h3 id="8-3-SubagentManager-已实现-主路径未接入">8.3 SubagentManager（已实现，主路径未接入）</h3>
+<p><code>runtime/subagent.py</code> 提供 <code>spawn</code> / <code>wait_all(timeout=60)</code> / <code>get_results_summary()</code>，<code>max_concurrent = 3</code>，子任务用独立 AgentRunner 与工具白名单，<code>history_limit = 0</code>，默认预算 <code>{steps:5, calls:3, timeout:30, token:24000}</code>。</p>
+<p><strong>已知不足</strong>：协作会议室现在走的是 <code>tasks.py</code> 自己的 <code>asyncio.gather</code>，没用这个模块。同一个进程里因此存在两套并发编排，再加上 provider 层的全局信号量（默认 2），实际并发受最紧的那一层约束。这是应该合并的重复实现。</p>
+<h3 id="8-4-与其他规划范式的机制差异">8.4 与其他规划范式的机制差异</h3>
+<div class="table-wrap"><table><tr><th>维度</th><th>本项目·单 Agent</th><th>本项目·协作会议室</th><th>ReAct 原始形态</th><th>Plan-and-Solve</th><th>Tree of Thoughts</th><th>AutoGen GroupChat</th><th>CrewAI</th></tr><tr><td>计划表示</td><td>无显式计划，逐步决策</td><td>一次性拆解为 ≤5 子任务</td><td>无显式计划</td><td>先出完整计划再执行</td><td>搜索树</td><td>无计划，靠发言轮转</td><td>显式 task 列表</td></tr><tr><td>执行拓扑</td><td>串行</td><td>全并行，无依赖建模</td><td>串行</td><td>多为串行</td><td>分支并行</td><td>串行发言</td><td>串行或层级</td></tr><tr><td>重规划</td><td>每轮隐式调整</td><td>无</td><td>每步隐式</td><td>无</td><td>回溯</td><td>有</td><td>有限</td></tr><tr><td>角色差异来源</td><td>单角色</td><td>绑定的仓库/领域/技能/工具白名单</td><td>无角色</td><td>无角色</td><td>无角色</td><td>仅 system prompt</td><td>prompt + 工具</td></tr><tr><td>交叉评审</td><td>无</td><td>固定两轮，草案全可见</td><td>无</td><td>无</td><td>评估节点</td><td>自由讨论</td><td>可配置</td></tr><tr><td>分歧处理</td><td>不适用</td><td>强制单列「分歧点与裁决」章节</td><td>不适用</td><td>不适用</td><td>剪枝</td><td>趋向共识</td><td>趋向共识</td></tr><tr><td>终止条件</td><td>预算四维 + 模型自判</td><td>时间比例切分</td><td>模型自判</td><td>计划走完</td><td>深度/宽度上限</td><td>轮数上限</td><td>任务完成</td></tr><tr><td>失败处理</td><td>finalize 兜底应答</td><td>每环独立降级</td><td>无</td><td>无</td><td>无</td><td>有限</td><td>有限</td></tr><tr><td>成本上界</td><td>可预测</td><td>可预测</td><td>不确定</td><td>较确定</td><td>高且难预测</td><td>易发散</td><td>中</td></tr></table></div>
+<h3 id="8-5-这套规划真正不一样的地方-以及它的天花板">8.5 这套规划真正不一样的地方，以及它的天花板</h3>
+<p><strong>两处我认为有实质差异的设计</strong></p>
+<ol>
+<li><strong>角色差异不只在 prompt 里</strong>。后端域员工的工具实例在构造期就注入了仓库白名单，越界会被 <code>_resolve_repo</code> 拦下，不是靠 prompt 请求它自觉。常见框架里角色差异只体现在 system message 上，这是不同层级的机制。</li>
+<li><strong>合成阶段我刻意保留分歧</strong>。合成 prompt 硬性要求「分歧点与裁决」章节，汇总首行强制 ✅/⚠️ 标记，并明确要求不得合并淡化。多数多 Agent 框架的目标是收敛到共识，我这里反过来。真实评审会上，被掩盖的分歧比没有共识更危险。</li>
+</ol>
+<p><strong>三处结构性限制（已知不足）</strong></p>
+<ol>
+<li>没有依赖建模。所有子任务无条件并行，但真实任务常有顺序约束（先定架构再定接口）。现在只能靠拆解 prompt 里的描述文字暗示顺序，执行层不保证。子任务支持 <code>depends_on</code> 做拓扑分层是下一步。</li>
+<li>没有重规划。第一轮拆解质量决定了上限，就算第二轮互评暴露出「漏了一个关键角色」，也不会重拆或补人。</li>
+<li>讨论轮数固定为 2，与分歧程度无关。分歧大时不会追加讨论，分歧小时也要付第二轮的成本。</li>
+</ol>
+<p><strong>关于时间比例切分，有一个我自己复盘时才意识到的问题</strong>：把 deadline 按 55%/35%/剩余切分，能保证整体不超时，但它切的是墙钟时间，而真正的瓶颈是 LLM 并发。在 <code>LLM_CONCURRENCY=2</code> 下，子任务越多，每个子任务实际能拿到的执行时间越少（排队时间也算在 <code>wait_for</code> 内），所以<strong>子任务数量与超时率是正相关的</strong>。我现在没有对应的保护，合理的做法是根据并发度反推子任务数上限，而不是固定截断到 5。</p>
+<hr>
+<h2 id="九-Git-仓库管理">九、Git 仓库管理</h2>
+<h3 id="9-1-git_service">9.1 git_service</h3>
+<p>所有 Git 操作都是子进程调系统 <code>git</code> CLI，没用 GitPython。启动时 <code>check_git_available()</code> 检一次并缓存结果，没装时返回按发行版分类的安装指引。</p>
+<div class="table-wrap"><table><tr><th>操作</th><th>实现</th><th>超时</th></tr><tr><td>clone</td><td><code>asyncio.create_subprocess_exec</code>，<strong>全量克隆</strong></td><td>300s</td></tr><tr><td>pull</td><td><code>git pull --ff-only</code></td><td>60s</td></tr><tr><td>切分支</td><td><code>fetch origin</code> → 本地有则 <code>checkout</code>，无则 <code>checkout -B &lt;b&gt; origin/&lt;b&gt;</code> → <code>pull --ff-only</code></td><td>各 60–120s</td></tr><tr><td>分支列表 / 作者查询</td><td><code>subprocess.run</code>，<strong>同步阻塞</strong></td><td>15s</td></tr></table></div>
+<p><strong>取舍</strong>：我没用浅克隆。<code>--depth 1</code> 只有一条提交，支撑不了 <code>git log</code> 查文件创建人/最后改动人，也切不了分支。磁盘多占一点换这两个能力，我认为划算。</p>
+<p>路径安全：<code>resolve_safe_path()</code> 把目标路径 <code>resolve()</code> 后校验是否以仓库根为前缀，防路径遍历。</p>
+<p><strong>已知不足（影响面最大的一个）</strong>：分支查询和作者查询用的是同步 <code>subprocess.run</code>，在 async 事件循环里会阻塞整个进程。单次 15 秒超时意味着最坏情况下一次请求可以卡住整个服务 15 秒。改成 <code>create_subprocess_exec</code> 就行，这是我优先级很靠前的一项。</p>
+<h3 id="9-2-定时刷新">9.2 定时刷新</h3>
+<p><code>auto_refresh_loop()</code> 每 60 秒轮询一次 <code>repository</code> 表，跳过 <code>auto_refresh_minutes</code> 为 NULL/0 的、未到间隔的、本地目录不存在的，其余跑 <code>pull_repo</code> 并更新 <code>last_sync_at</code>。时间比较统一用 naive UTC，因为 MySQL DATETIME 不带时区。循环内捕获所有异常后继续，只有 <code>CancelledError</code> 直接上抛，以便随服务正常关停。</p>
+<h3 id="9-3-仓库-REST-接口">9.3 仓库 REST 接口</h3>
+<div class="table-wrap"><table><tr><th>方法</th><th>路径</th><th>说明</th></tr><tr><td>GET</td><td><code>/env</code></td><td>环境自检：git CLI、磁盘（要求剩余超 1GB）、workspaces 可写性、git 全局配置、Gitee/GitHub/GitLab 连通性</td></tr><tr><td>POST</td><td><code>/clone</code></td><td>clone 并写入 <code>Repository</code> 表</td></tr><tr><td>GET</td><td>根路径</td><td>列表；先调 <code>sync_workspace_repos</code> 把本地目录增量登记入库</td></tr><tr><td>GET</td><td><code>/{id}/files</code>、<code>/read</code>、<code>/structure</code>、<code>/branches</code>、<code>/file-author</code></td><td>只读查询</td></tr><tr><td>POST</td><td><code>/{id}/search</code>、<code>/pull</code>、<code>/checkout</code></td><td>检索与同步</td></tr><tr><td>PATCH</td><td><code>/{id}</code></td><td>改名（同步重命名本地目录）、改地址、改默认分支、改刷新间隔（0 关闭，上限 7 天）</td></tr><tr><td>DELETE</td><td><code>/{id}</code></td><td>删本地目录 + 删表记录 + 清理 <code>AgentRepoBinding</code></td></tr></table></div>
+<p>两处我特意处理过的地方：</p>
+<ol>
+<li>Windows 下 <code>.git</code> 内只读文件会让 <code>shutil.rmtree</code> 抛 <code>PermissionError</code>。我用 <code>onexc</code> 回调去掉只读位后重试，并明确不用 <code>ignore_errors=True</code>——静默失败后列表接口的 <code>sync_workspace_repos</code> 会把残留目录重新登记，用户看到的就是「删不掉」。</li>
+<li>删完再校验一次目录是否仍在，仍在就报 500，不拿假成功糊弄前端。</li>
+</ol>
+<p>另外，<code>sync_workspace_repos</code> 与列表接口的兜底逻辑都要求目录下存在 <code>.git</code> 才登记，以此排除 <code>collab_docs</code>、<code>uploads</code> 这些非仓库目录。</p>
+<hr>
+<h2 id="十-数据模型">十、数据模型</h2>
+<div class="table-wrap"><table><tr><th>表</th><th>关键字段</th><th>状态取值</th></tr><tr><td><code>agent</code></td><td><code>agents_md</code>、<code>skills</code>、<code>resources</code>、<code>role_pack_id</code>、<code>adoption_rate</code>、<code>session_count</code></td><td>draft → indexing → pending_check → trial → online → maintenance / retired</td></tr><tr><td><code>role_pack</code></td><td><code>config</code>（JSON：tools / skills / permission / budget）</td><td>—</td></tr><tr><td><code>role_pack_version</code></td><td><code>spec</code>、<code>checksum</code>(SHA-256)、<code>rollout</code>（灰度百分比）</td><td>DRAFT → IN_REVIEW → CANARY → RELEASED → ROLLED_BACK / RETIRED</td></tr><tr><td><code>session</code></td><td><code>user_id</code>（默认 <code>guest</code>）、<code>title</code>、<code>state</code></td><td>active / closed</td></tr><tr><td><code>message</code></td><td><code>role</code>、<code>content</code>、<code>agent_id</code>、<code>evidence_ids</code>、<code>confidence</code>、<code>feedback</code></td><td>—</td></tr><tr><td><code>knowledge_candidate</code></td><td><code>body_md</code>、<code>evidence_ids</code>、<code>commit_sha</code>、<code>expires_at</code>、<code>scope</code>、<code>conflict_warning</code></td><td>SUBMITTED → IN_REVIEW → APPROVED / REJECTED → EXPIRED</td></tr><tr><td><code>task_card</code></td><td><code>deadline_minutes</code>（默认 30）、<code>tags</code>、<code>conflict_note</code>、<code>result_doc_path</code></td><td>in_progress / completed / failed</td></tr><tr><td><code>task_assignment</code></td><td><code>subtask_detail</code>、<code>discussion_note</code>、<code>confidence</code>、<code>agent_emoji</code></td><td>analyzing → submitted → discussing → discussed；clarify 为失败/超时态</td></tr><tr><td><code>change_request</code></td><td><code>diff</code>、<code>approval_policy</code></td><td>PENDING → APPROVED / REJECTED → APPLIED / FAILED；策略 SINGLE / DUAL / QUORUM</td></tr><tr><td><code>policy_rule</code></td><td><code>category</code>、<code>version</code>（追加式）</td><td>ACL / REDACTION / BUDGET / TOOL_RISK；ACTIVE / DISABLED</td></tr><tr><td><code>gov_role</code></td><td>—</td><td>platform-admin / rolepack-owner / knowledge-reviewer / security-reviewer / auditor</td></tr><tr><td><code>repository</code></td><td><code>clone_url</code>、<code>default_branch</code>、<code>auto_refresh_minutes</code>、<code>last_sync_at</code>、<code>owner</code></td><td>CONNECTING → CONNECTED → INDEXING → READY → DEGRADED / FAILED</td></tr><tr><td><code>agent_repo_binding</code></td><td><code>agent_id</code> × <code>repo_id</code>（引用 <code>Repository.id</code> 而非 name，所以改名不断绑定）</td><td>—</td></tr><tr><td><code>audit_log</code></td><td>actor / action / target / detail / trace_id / decision</td><td>ALLOW / DENY</td></tr></table></div>
+<p><strong>已知不足</strong>：<code>session.user_id</code> 默认是 <code>guest</code>，对话链路上没有认证依赖注入。所以现在所有会话在数据层面都归属同一个虚拟用户，<code>gov_role</code> 定义的角色体系在对话侧还没接入。治理模型是齐备的，但权限还没落到人头上。</p>
+<hr>
+<h2 id="十一-并发-超时与失败模式">十一、并发、超时与失败模式</h2>
+<p>先用一张图看清楚超时是怎么嵌套的，下面的表是完整参数清单：</p>
+<figure class="diagram"><div class="hd-host" data-diagram="{&quot;type&quot;: &quot;flow&quot;, &quot;dir&quot;: &quot;TB&quot;, &quot;nodes&quot;: [{&quot;id&quot;: &quot;T1&quot;, &quot;label&quot;: &quot;协作任务 deadline_minutes（默认 30 分钟）&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;T2&quot;, &quot;label&quot;: &quot;Round 1 = 55% · Round 2 = 35% · 合成保底 90s&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;T3&quot;, &quot;label&quot;: &quot;单个 Agent 执行 Budget.timeout_sec = 60s\nmax_steps=8 · max_calls=6 · max_token=48000&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;T4&quot;, &quot;label&quot;: &quot;LLM 单次请求 LLM_TIMEOUT = 60s&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;T5&quot;, &quot;label&quot;: &quot;全局并发闸 LLM_CONCURRENCY = 2\n排队时间计入上层超时&quot;, &quot;shape&quot;: &quot;rect&quot;}, {&quot;id&quot;: &quot;N&quot;, &quot;label&quot;: &quot;❗ 真正的瓶颈在最内层：\n子任务越多，每个拿到的实际执行时间越少&quot;, &quot;shape&quot;: &quot;rect&quot;}], &quot;edges&quot;: [{&quot;from&quot;: &quot;T1&quot;, &quot;to&quot;: &quot;T2&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;T2&quot;, &quot;to&quot;: &quot;T3&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;T3&quot;, &quot;to&quot;: &quot;T4&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;T4&quot;, &quot;to&quot;: &quot;T5&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}, {&quot;from&quot;: &quot;T5&quot;, &quot;to&quot;: &quot;N&quot;, &quot;dotted&quot;: false, &quot;label&quot;: null, &quot;arrow&quot;: true}], &quot;groups&quot;: [], &quot;seed&quot;: 163}"></div></figure>
+<p>排查线上问题时看这张表就够了，我把散在各处的时间与并发参数集中在一起：</p>
+<div class="table-wrap"><table><tr><th>环节</th><th>参数</th><th>值</th><th>超时后的行为</th></tr><tr><td>LLM 单次请求</td><td><code>LLM_TIMEOUT</code></td><td>60s</td><td>按类型判为瞬时错误 → 退避 1/2/4/8 重试</td></tr><tr><td>LLM 全局并发</td><td><code>LLM_CONCURRENCY</code></td><td>2</td><td>排队，等待时间计入上层超时</td></tr><tr><td>Agent 单次执行</td><td><code>Budget.timeout_sec</code></td><td>60s</td><td>finalize 兜底应答</td></tr><tr><td>Agent 步数</td><td><code>Budget.max_steps</code></td><td>8</td><td>同上</td></tr><tr><td>上下文压缩</td><td>阈值 32000 token</td><td>—</td><td>压缩失败降级为截断 200 字</td></tr><tr><td>协作 Round 1</td><td>deadline × 55%</td><td>—</td><td>标记 clarify</td></tr><tr><td>协作 Round 2</td><td>deadline × 35%</td><td>—</td><td>回退 submitted，保留草案</td></tr><tr><td>协作整轮重试</td><td>退避 3s / 8s，2 次</td><td>—</td><td>记为未交付</td></tr><tr><td>Subagent</td><td><code>max_concurrent=3</code>，<code>wait_all(timeout=60)</code></td><td>—</td><td>主路径未启用</td></tr><tr><td>git clone</td><td>300s</td><td>—</td><td>返回失败</td></tr><tr><td>git pull / checkout</td><td>60–120s</td><td>—</td><td>返回失败</td></tr><tr><td>git 分支/作者查询</td><td>15s，<strong>同步阻塞</strong></td><td>—</td><td>返回空</td></tr><tr><td>仓库定时刷新</td><td>60s 轮询</td><td>—</td><td>异常记日志继续</td></tr></table></div>
+<h3 id="三个我在线上碰到过的真实故障">三个我在线上碰到过的真实故障</h3>
+<div class="table-wrap"><table><tr><th>故障</th><th>根因</th><th>现状</th></tr><tr><td>协作会议室出现 <code>[LLM 调用失败: ]</code>，错误信息是空的</td><td>httpx 超时异常 <code>str(e)</code> 为空串，我早期靠消息匹配判断可重试性</td><td>已改成按异常类型判定</td></tr><tr><td>草案里出现工具名重复数百次</td><td>finalize 轮 <code>tools=None</code> 但模型仍试图调工具</td><td>已加正则清洗 + 短回答重试</td></tr><tr><td>模型凭文档名编造正文</td><td>资源工具在正文不可读时没作说明</td><td>已加显式禁止提示</td></tr></table></div>
+<h3 id="SSE-场景下的一条数据库纪律">SSE 场景下的一条数据库纪律</h3>
+<p>流式接口内的所有写库必须立即 <code>commit</code>：<code>_get_or_create_session</code>、<code>_save_message</code>、标题更新、反馈记录都是。不这么做的话，事务会横跨整个 LLM 调用（数十秒），MySQL 在 REPEATABLE READ 下会阻塞其他请求的 INSERT 直到锁等待超时。接手的人在流式链路上加写库逻辑时，请继续保持这个习惯。</p>
+<hr>
+<h2 id="十二-总结">十二、总结</h2>
+<h3 id="12-1-我认为这套系统做对的五件事">12.1 我认为这套系统做对的五件事</h3>
+<ol>
+<li><strong>权限边界落在执行层，不在提示层</strong>。仓库白名单在工具构造期就注入，越界由代码拦，不靠模型自觉。</li>
+<li><strong>外部调用几乎都有降级分支</strong>。LLM、MCP、git、DB 写入、文档合成各自都有明确的失败路径，单点失败不会把整个流程带倒。</li>
+<li><strong>MCP 会话生命周期处理对了</strong>。<code>AsyncExitStack</code> 由调用方持有并覆盖整个消费过程，这是这类集成里最容易出错的一点。</li>
+<li><strong>协议翻译层隔离了模型供应商</strong>。换 LLM 只需改 provider 一层。</li>
+<li><strong>注释里写了「为什么」而不只是「写了什么」</strong>。很多发现很难从代码重新推出来，写下来才不会丢。</li>
+</ol>
+<h3 id="12-2-我自己列的待办清单">12.2 我自己列的待办清单</h3>
+<div class="table-wrap"><table><tr><th>级别</th><th>问题</th><th>位置</th></tr><tr><td>P0</td><td>三项凭据以明文写在公开仓库的默认值里，需轮换 + 改强制环境变量</td><td><code>config.py</code></td></tr><tr><td>P0</td><td>知识检索「先取最近 5 条再过滤」，超出 5 条的知识永不可召回</td><td><code>runtime/tools/__init__.py</code></td></tr><tr><td>P1</td><td>git 分支/作者查询用同步 <code>subprocess.run</code>，阻塞事件循环最长 15s</td><td><code>git_service.py</code></td></tr><tr><td>P1</td><td>代码检索无索引，且每个命中文件额外两次 <code>git log</code></td><td><code>git_service.py</code></td></tr><tr><td>P1</td><td>无认证，<code>user_id</code> 恒为 <code>guest</code>，<code>gov_role</code> 未接入对话侧</td><td><code>frontdesk.py</code></td></tr><tr><td>P1</td><td>会话历史丢弃工具消息，且 10 条上限硬编码</td><td><code>context.py</code></td></tr><tr><td>P1</td><td>项目未纳入 Git 版本管理，靠 <code>.bak</code> 文件链回滚</td><td>全局</td></tr><tr><td>P2</td><td>Hook 仅在流式路径挂载，非流式无审计无脱敏</td><td><code>runner.py</code></td></tr><tr><td>P2</td><td>注入检测为英文黑名单，不覆盖中文与间接注入</td><td><code>hooks.py</code></td></tr><tr><td>P2</td><td>两套 Agent 实现并存，应彻底隔离或删除旁路</td><td><code>runtime/</code> vs <code>agents/</code></td></tr><tr><td>P2</td><td>两套并发编排并存，应合并</td><td><code>subagent.py</code> vs <code>tasks.py</code></td></tr><tr><td>P2</td><td>协作子任务数与超时率正相关，无保护</td><td><code>tasks.py</code></td></tr><tr><td>P2</td><td>仓库存本机文件系统，多实例部署需共享存储</td><td><code>git_service.py</code></td></tr><tr><td>P2</td><td>知识条目 <code>state</code> 与 <code>status</code> 两套口径待核</td><td><code>models/knowledge.py</code></td></tr></table></div>
+<h3 id="12-3-这套系统的取向">12.3 这套系统的取向</h3>
+<p>回头看，我的技术选择有一个一致的倾向：<strong>在能力上限和行为可控之间，我稳定地选后者</strong>。</p>
+<ul>
+<li>不用向量检索，接受召回率损失，换零索引维护与结果可追溯；</li>
+<li>不做自动知识沉淀，接受沉淀慢，换不会写入错误结论；</li>
+<li>不用通用 Agent 框架，接受自己写循环，换工具边界与预算的精确控制；</li>
+<li>并发只开 2，接受慢，换不被上游限流打断。</li>
+</ul>
+<p>对「企业内部、答错代价高于答慢代价」这个场景，我认为这个取向是对的，现在也不打算推翻。</p>
+<p>但取向对不等于实现到位。真正的风险不在这些取舍上，而在两处执行层面的问题：<strong>知识召回的逻辑顺序写反了</strong>，让长期记忆形同虚设；<strong>同步阻塞的 git 调用</strong>，让「慢」可能变成「卡住整个服务」。这两项修复成本都很低，是我接下来先动的。</p>
+<p>最后说明一句：本文所有性能相关的判断都是静态分析得出的，没经过实测。仓库规模、知识条目数量、并发用户数这三个变量会明显改变结论权重。真要上规模，建议先补一轮压测再定优先级。</p>
+<footer class="doc-footer">
+  <span>Office_Agent 设计文档 · 作者 张朝</span>
+  <span><a href="/doc/">文档中心</a> · <a href="/doc/office_agent_prd.html">产品文档（PRD）</a> · <a href="/">返回应用</a></span>
+</footer>
+</main>
+</div>
+<script>/* Excalidraw-style hand-drawn diagram renderer (offline, zero dependencies) */
+(function () {
+  var PALETTE = ['#ffec99', '#b2f2bb', '#a5d8ff', '#ffc9c9', '#d0bfff', '#ffd8a8', '#c5f6fa', '#e9fac8'];
+  var STROKE = '#1e1e1e';
+  var FS = 15;
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function Sketch(seed) { this.r = mulberry32(seed || 7); }
+  Sketch.prototype.j = function (m) { return (this.r() * 2 - 1) * m; };
+
+  function el(name, attrs) {
+    var e = document.createElementNS('http://www.w3.org/2000/svg', name);
+    for (var k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function sketchLine(s, x1, y1, x2, y2, w) {
+    w = w || 1.6;
+    var g = document.createDocumentFragment();
+    for (var p = 0; p < 2; p++) {
+      var mx = (x1 + x2) / 2 + s.j(1.8), my = (y1 + y2) / 2 + s.j(1.8);
+      var d = 'M' + (x1 + s.j(1.1)) + ',' + (y1 + s.j(1.1)) +
+        ' Q' + mx + ',' + my + ' ' + (x2 + s.j(1.1)) + ',' + (y2 + s.j(1.1));
+      g.appendChild(el('path', { d: d, fill: 'none', stroke: STROKE, 'stroke-width': w - p * 0.5, 'stroke-linecap': 'round', opacity: p ? 0.5 : 1 }));
+    }
+    return g;
+  }
+
+  function roundRectPath(x, y, w, h, r, s, jit) {
+    jit = jit === undefined ? 1.3 : jit;
+    function p(a, b) { return (a + s.j(jit)).toFixed(1) + ',' + (b + s.j(jit)).toFixed(1); }
+    return 'M' + p(x + r, y) + ' L' + p(x + w - r, y) + ' Q' + p(x + w, y) + ' ' + p(x + w, y + r) +
+      ' L' + p(x + w, y + h - r) + ' Q' + p(x + w, y + h) + ' ' + p(x + w - r, y + h) +
+      ' L' + p(x + r, y + h) + ' Q' + p(x, y + h) + ' ' + p(x, y + h - r) +
+      ' L' + p(x, y + r) + ' Q' + p(x, y) + ' ' + p(x + r, y) + ' Z';
+  }
+  function diamondPath(x, y, w, h, s) {
+    function p(a, b) { return (a + s.j(1.5)).toFixed(1) + ',' + (b + s.j(1.5)).toFixed(1); }
+    return 'M' + p(x + w / 2, y) + ' L' + p(x + w, y + h / 2) + ' L' + p(x + w / 2, y + h) + ' L' + p(x, y + h / 2) + ' Z';
+  }
+
+  function shape(s, node) {
+    var g = el('g', {});
+    var d;
+    if (node.shape === 'diamond') d = diamondPath(node.x, node.y, node.w, node.h, s);
+    else if (node.shape === 'stadium') d = roundRectPath(node.x, node.y, node.w, node.h, node.h / 2, s);
+    else d = roundRectPath(node.x, node.y, node.w, node.h, 9, s);
+    var d2 = node.shape === 'diamond' ? diamondPath(node.x, node.y, node.w, node.h, s)
+      : roundRectPath(node.x, node.y, node.w, node.h, node.shape === 'stadium' ? node.h / 2 : 9, s);
+    g.appendChild(el('path', { d: d, fill: node.fill || '#fff', stroke: 'none', opacity: 0.9 }));
+    g.appendChild(el('path', { d: d, fill: 'none', stroke: STROKE, 'stroke-width': 1.9, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    g.appendChild(el('path', { d: d2, fill: 'none', stroke: STROKE, 'stroke-width': 1.0, 'stroke-linecap': 'round', opacity: 0.45 }));
+    return g;
+  }
+
+  function arrowHead(s, x, y, angle) {
+    var g = document.createDocumentFragment(), len = 12;
+    for (var i = -1; i <= 1; i += 2) {
+      var a = angle + Math.PI + i * 0.42;
+      g.appendChild(sketchLine(s, x, y, x + Math.cos(a) * len, y + Math.sin(a) * len, 1.7));
+    }
+    return g;
+  }
+
+  function textBlock(lines, cx, cy, size, anchor) {
+    var g = el('g', {}), lh = size * 1.4;
+    var top = cy - ((lines.length - 1) * lh) / 2;
+    for (var i = 0; i < lines.length; i++) {
+      var t = el('text', { x: cx, y: top + i * lh, 'text-anchor': anchor || 'middle', 'dominant-baseline': 'middle', 'font-size': size, fill: STROKE, class: 'hd-text' });
+      t.textContent = lines[i];
+      g.appendChild(t);
+    }
+    return g;
+  }
+
+  function chWidth(c) {
+    var n = c.charCodeAt(0);
+    if (n > 0x2e00) return 1.0;
+    if (n > 0x2000) return 0.8;
+    return 0.57;
+  }
+  function lineWidth(str, size) {
+    var w = 0;
+    for (var i = 0; i < str.length; i++) w += chWidth(str[i]);
+    return w * size;
+  }
+
+  // ------------------------------------------------------------- flowchart --
+  function renderFlow(spec, host) {
+    var s = new Sketch(spec.seed || 11);
+    var horizontal = (spec.dir === 'LR' || spec.dir === 'RL');
+    var byId = {};
+
+    spec.nodes.forEach(function (n, i) {
+      n.idx = i;
+      n.lines = n.label.split('\n');
+      var mw = 0;
+      n.lines.forEach(function (l) { mw = Math.max(mw, lineWidth(l, FS)); });
+      n.w = Math.max(104, Math.round(mw) + 36);
+      n.h = Math.max(48, n.lines.length * FS * 1.42 + 26);
+      if (n.shape === 'diamond') { n.w += 40; n.h += 18; }
+      if (!n.fill) n.fill = PALETTE[(i * 3) % PALETTE.length];
+      byId[n.id] = n;
+    });
+
+    // --- build layout units (groups become composite units) ---
+    var groups = spec.groups || [];
+    var unitOf = {}, units = [];
+    groups.forEach(function (g) {
+      var members = g.members.filter(function (m) { return byId[m]; });
+      if (!members.length) return;
+      var u = { kind: 'group', id: g.id, label: g.label, members: members };
+      units.push(u);
+      members.forEach(function (m) { unitOf[m] = u; });
+      unitOf[g.id] = u;
+    });
+    spec.nodes.forEach(function (n) {
+      if (unitOf[n.id]) return;
+      var u = { kind: 'single', id: n.id, members: [n.id] };
+      units.push(u);
+      unitOf[n.id] = u;
+    });
+
+    // size units
+    var GP = 18, TITLE = 26, GAPIN = 20;
+    units.forEach(function (u) {
+      if (u.kind === 'single') {
+        var n = byId[u.members[0]];
+        u.w = n.w; u.h = n.h;
+        u.rel = [{ n: n, x: 0, y: 0 }];
+        return;
+      }
+      var perRow = u.members.length <= 3 ? u.members.length : (u.members.length <= 4 ? 2 : 3);
+      if (horizontal && u.members.length > 3) perRow = 2;
+      var rows = [], cur = [];
+      u.members.forEach(function (m) {
+        cur.push(byId[m]);
+        if (cur.length === perRow) { rows.push(cur); cur = []; }
+      });
+      if (cur.length) rows.push(cur);
+      var rowW = rows.map(function (r) {
+        return r.reduce(function (a, n) { return a + n.w + GAPIN; }, -GAPIN);
+      });
+      var innerW = Math.max.apply(null, rowW);
+      var rel = [], y = 0;
+      rows.forEach(function (r, ri) {
+        var rh = Math.max.apply(null, r.map(function (n) { return n.h; }));
+        var x = (innerW - rowW[ri]) / 2;
+        r.forEach(function (n) { rel.push({ n: n, x: x, y: y + (rh - n.h) / 2 }); x += n.w + GAPIN; });
+        y += rh + GAPIN;
+      });
+      var innerH = y - GAPIN;
+      u.w = innerW + GP * 2;
+      u.h = innerH + GP * 2 + TITLE;
+      u.rel = rel.map(function (r) { return { n: r.n, x: r.x + GP, y: r.y + GP + TITLE }; });
+    });
+
+    // --- unit-level layering ---
+    var uidx = {};
+    units.forEach(function (u, i) { uidx[u.id] = i; u.layer = 0; });
+    var uEdges = [];
+    spec.edges.forEach(function (e) {
+      if (e.dotted) return;
+      var a = unitOf[e.from], b = unitOf[e.to];
+      if (!a || !b || a === b) return;
+      uEdges.push([a, b]);
+    });
+    for (var it = 0; it < units.length + 2; it++) {
+      var changed = false;
+      uEdges.forEach(function (e) {
+        if (e[1].layer < e[0].layer + 1) { e[1].layer = e[0].layer + 1; changed = true; }
+      });
+      if (!changed) break;
+    }
+
+    var byLayer = {};
+    units.forEach(function (u, i) { u.order = i; (byLayer[u.layer] = byLayer[u.layer] || []).push(u); });
+    var layers = Object.keys(byLayer).map(Number).sort(function (a, b) { return a - b; });
+
+    // --- barycenter ordering to reduce edge crossings ---
+    var pred = {}, succ = {};
+    units.forEach(function (u) { pred[u.id] = []; succ[u.id] = []; });
+    uEdges.forEach(function (e) {
+      if (e[0].layer >= e[1].layer) return; // skip back edges
+      succ[e[0].id].push(e[1]);
+      pred[e[1].id].push(e[0]);
+    });
+    layers.forEach(function (li) { byLayer[li].forEach(function (u, i) { u.pos = i; }); });
+    function bary(u, list) {
+      var arr = list[u.id];
+      if (!arr || !arr.length) return u.pos;
+      var sum = 0;
+      arr.forEach(function (v) { sum += v.pos; });
+      return sum / arr.length;
+    }
+    for (var sweep = 0; sweep < 6; sweep++) {
+      var seq = sweep % 2 ? layers.slice().reverse() : layers;
+      seq.forEach(function (li) {
+        var arr = byLayer[li];
+        var list = sweep % 2 ? succ : pred;
+        arr.forEach(function (u) { u.bc = bary(u, list); });
+        arr.sort(function (a, b) { return a.bc - b.bc || a.order - b.order; });
+        arr.forEach(function (u, i) { u.pos = i; });
+      });
+    }
+
+    var GAPM = 88, GAPC = 40, PAD = 40;
+    var main = PAD, maxCross = 0;
+    layers.forEach(function (li) {
+      var arr = byLayer[li], mainSize = 0, cross = 0;
+      arr.forEach(function (u) {
+        mainSize = Math.max(mainSize, horizontal ? u.w : u.h);
+        cross += (horizontal ? u.h : u.w) + GAPC;
+      });
+      cross -= GAPC;
+      arr.mainSize = mainSize; arr.cross = cross; arr.mainStart = main;
+      maxCross = Math.max(maxCross, cross);
+      main += mainSize + GAPM;
+    });
+    layers.forEach(function (li) {
+      var arr = byLayer[li];
+      var c = PAD + (maxCross - arr.cross) / 2;
+      arr.forEach(function (u) {
+        if (horizontal) { u.x = arr.mainStart + (arr.mainSize - u.w) / 2; u.y = c; c += u.h + GAPC; }
+        else { u.y = arr.mainStart + (arr.mainSize - u.h) / 2; u.x = c; c += u.w + GAPC; }
+      });
+    });
+    var W = (horizontal ? main - GAPM + PAD : maxCross + PAD * 2);
+    var H = (horizontal ? maxCross + PAD * 2 : main - GAPM + PAD);
+
+    units.forEach(function (u) {
+      u.rel.forEach(function (r) { r.n.x = u.x + r.x; r.n.y = u.y + r.y; });
+    });
+
+    function boxOf(id) {
+      if (byId[id]) return byId[id];
+      var u = unitOf[id];
+      return u ? { x: u.x, y: u.y, w: u.w, h: u.h } : null;
+    }
+    function anchors(a, b) {
+      var fx = a.x + a.w / 2, fy = a.y + a.h / 2, tx = b.x + b.w / 2, ty = b.y + b.h / 2;
+      var dx = tx - fx, dy = ty - fy;
+      if (Math.abs(dx) * (horizontal ? 1.4 : 0.8) > Math.abs(dy)) {
+        return [{ x: dx > 0 ? a.x + a.w : a.x, y: fy }, { x: dx > 0 ? b.x : b.x + b.w, y: ty }];
+      }
+      return [{ x: fx, y: dy > 0 ? a.y + a.h : a.y }, { x: tx, y: dy > 0 ? b.y : b.y + b.h }];
+    }
+
+    var svg = el('svg', { xmlns: 'http://www.w3.org/2000/svg', class: 'hd-svg' });
+    var g = el('g', {});
+    var backPad = 0;
+
+    // group frames
+    units.forEach(function (u) {
+      if (u.kind !== 'group') return;
+      var d = roundRectPath(u.x, u.y, u.w, u.h, 12, s, 1.8);
+      g.appendChild(el('path', { d: d, fill: '#f5f2ea', stroke: 'none', opacity: 0.8 }));
+      g.appendChild(el('path', { d: d, fill: 'none', stroke: '#7a7a7a', 'stroke-width': 1.5, 'stroke-dasharray': '9 6', 'stroke-linecap': 'round' }));
+      var t = el('text', { x: u.x + 14, y: u.y + 18, 'font-size': 14, fill: '#5c5c5c', class: 'hd-text' });
+      t.textContent = u.label;
+      g.appendChild(t);
+    });
+
+    function labelChip(text, cx, cy) {
+      var gg = el('g', {}), lines = text.split('\n'), fs = 12.5, w = 0;
+      lines.forEach(function (l) { w = Math.max(w, lineWidth(l, fs)); });
+      var h = lines.length * fs * 1.35 + 8;
+      gg.appendChild(el('rect', { x: cx - w / 2 - 7, y: cy - h / 2, width: w + 14, height: h, rx: 5, fill: '#fffdf5', stroke: '#ddd6c4', 'stroke-width': 1 }));
+      gg.appendChild(textBlock(lines, cx, cy, fs));
+      return gg;
+    }
+
+    spec.edges.forEach(function (e) {
+      var a = boxOf(e.from), b = boxOf(e.to);
+      if (!a || !b) return;
+      if (e.from === e.to) {
+        var lx = a.x + a.w, ly = a.y + a.h / 2;
+        g.appendChild(el('path', {
+          d: 'M' + lx + ',' + (ly - 13) + ' C' + (lx + 62) + ',' + (ly - 48) + ' ' + (lx + 62) + ',' + (ly + 48) + ' ' + lx + ',' + (ly + 13),
+          fill: 'none', stroke: STROKE, 'stroke-width': 1.6, 'stroke-dasharray': e.dotted ? '7 5' : null
+        }));
+        g.appendChild(arrowHead(s, lx, ly + 13, Math.PI * 0.72));
+        if (e.label) g.appendChild(labelChip(e.label, lx + 70, ly));
+        return;
+      }
+      var ua = unitOf[e.from] || unitOf[byId[e.from] && byId[e.from].id];
+      var ub = unitOf[e.to] || unitOf[byId[e.to] && byId[e.to].id];
+      if (!e.dotted && ua && ub && ua.layer > ub.layer) {
+        // back edge: route around the side so the loop stays readable
+        var side = (a.x + a.w / 2) >= (b.x + b.w / 2) ? 1 : -1;
+        var sx = side > 0 ? a.x + a.w : a.x, sy = a.y + a.h / 2;
+        var tx = side > 0 ? b.x + b.w : b.x, ty = b.y + b.h / 2;
+        var off = side * (70 + Math.min(90, Math.abs(sy - ty) * 0.25));
+        backPad = Math.max(backPad, Math.abs(off) + 70);
+        g.appendChild(el('path', {
+          d: 'M' + sx + ',' + sy + ' C' + (sx + off) + ',' + sy + ' ' + (tx + off) + ',' + ty + ' ' + tx + ',' + ty,
+          fill: 'none', stroke: '#555', 'stroke-width': 1.6, 'stroke-linecap': 'round'
+        }));
+        g.appendChild(arrowHead(s, tx, ty, side > 0 ? Math.PI : 0));
+        if (e.label) g.appendChild(labelChip(e.label, (sx + tx) / 2 + off * 0.82, (sy + ty) / 2));
+        return;
+      }
+      var p = anchors(a, b), p1 = p[0], p2 = p[1];
+      var mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+      g.appendChild(el('path', {
+        d: 'M' + p1.x + ',' + p1.y + ' Q' + (mx + s.j(5)) + ',' + (my + s.j(5)) + ' ' + p2.x + ',' + p2.y,
+        fill: 'none', stroke: e.dotted ? '#8a8a8a' : STROKE,
+        'stroke-width': e.dotted ? 1.4 : 1.8, 'stroke-linecap': 'round',
+        'stroke-dasharray': e.dotted ? '8 6' : null
+      }));
+      if (e.arrow !== false) g.appendChild(arrowHead(s, p2.x, p2.y, Math.atan2(p2.y - my, p2.x - mx)));
+      if (e.label) g.appendChild(labelChip(e.label, mx, my));
+    });
+
+    spec.nodes.forEach(function (n) {
+      g.appendChild(shape(s, n));
+      g.appendChild(textBlock(n.lines, n.x + n.w / 2, n.y + n.h / 2, FS));
+    });
+
+    var VX = -backPad, VW = W + backPad * 2;
+    svg.setAttribute('viewBox', VX + ' 0 ' + VW + ' ' + H);
+    svg.setAttribute('width', Math.round(VW));
+    svg.setAttribute('height', Math.round(H));
+    svg.appendChild(g);
+    host.appendChild(svg);
+    return { w: VW, h: H };
+  }
+
+  // ------------------------------------------------------- sequence diagram --
+  function renderSeq(spec, host) {
+    var s = new Sketch(spec.seed || 23);
+    var boxH = 56, gap = 62, parts = spec.participants;
+    var cur = 30, xs = [];
+    parts.forEach(function (p) {
+      p.lines = p.label.split('\n');
+      var w = 0;
+      p.lines.forEach(function (l) { w = Math.max(w, lineWidth(l, FS)); });
+      p.w = Math.max(120, w + 32);
+      p.h = Math.max(boxH, p.lines.length * FS * 1.4 + 24);
+      p.x = cur; cur += p.w + gap;
+      xs.push(p.x + p.w / 2);
+    });
+    boxH = Math.max.apply(null, parts.map(function (p) { return p.h; }));
+    var width = cur - gap + 30;
+
+    var y = 34 + boxH + 26;
+    spec.messages.forEach(function (m) {
+      m.lines = m.text.split('\n');
+      m.h = m.lines.length * 13 * 1.4 + (m.note ? 46 : 30);
+      m.y = y; y += m.h;
+    });
+    var height = y + 40;
+
+    var svg = el('svg', { xmlns: 'http://www.w3.org/2000/svg', class: 'hd-svg', viewBox: '0 0 ' + width + ' ' + height, width: Math.round(width), height: Math.round(height) });
+    var g = el('g', {});
+
+    xs.forEach(function (cx) {
+      g.appendChild(el('line', { x1: cx, y1: 34 + boxH, x2: cx, y2: height - 18, stroke: '#a5a5a5', 'stroke-width': 1.3, 'stroke-dasharray': '8 7' }));
+    });
+
+    spec.messages.forEach(function (m) {
+      if (m.note) {
+        g.appendChild(el('rect', { x: 16, y: m.y - 4, width: width - 32, height: m.h - 2, rx: 9, fill: '#eef6ff', stroke: '#9ec5f0', 'stroke-width': 1.2, 'stroke-dasharray': '7 5' }));
+        var nt = el('text', { x: 28, y: m.y + 14, 'font-size': 12.5, fill: '#3b6ea5', class: 'hd-text' });
+        nt.textContent = m.note;
+        g.appendChild(nt);
+      }
+      var y0 = m.y + m.h - 14;
+      if (m.fromIdx === m.toIdx) {
+        var cx = xs[m.fromIdx];
+        g.appendChild(el('path', {
+          d: 'M' + cx + ',' + (y0 - 24) + ' C' + (cx + 72) + ',' + (y0 - 28) + ' ' + (cx + 72) + ',' + y0 + ' ' + cx + ',' + y0,
+          fill: 'none', stroke: STROKE, 'stroke-width': 1.6, 'stroke-dasharray': m.dashed ? '7 5' : null
+        }));
+        g.appendChild(arrowHead(s, cx, y0, Math.PI * 0.8));
+        g.appendChild(textBlock(m.lines, cx + 84, y0 - 14, 13, 'start'));
+      } else {
+        var x1 = xs[m.fromIdx], x2 = xs[m.toIdx], dir = x2 > x1 ? 1 : -1;
+        g.appendChild(el('line', {
+          x1: x1 + dir * 4, y1: y0, x2: x2 - dir * 7, y2: y0 + s.j(1),
+          stroke: STROKE, 'stroke-width': m.dashed ? 1.4 : 1.8, 'stroke-linecap': 'round',
+          'stroke-dasharray': m.dashed ? '9 6' : null
+        }));
+        g.appendChild(arrowHead(s, x2 - dir * 7, y0, dir > 0 ? 0 : Math.PI));
+        var cx2 = (x1 + x2) / 2, lw = 0;
+        m.lines.forEach(function (l) { lw = Math.max(lw, lineWidth(l, 13)); });
+        var lh = m.lines.length * 13 * 1.4 + 8;
+        g.appendChild(el('rect', { x: cx2 - lw / 2 - 8, y: y0 - lh - 7, width: lw + 16, height: lh, rx: 5, fill: '#fffdf5', stroke: '#e0dbcb', 'stroke-width': 1 }));
+        g.appendChild(textBlock(m.lines, cx2, y0 - lh / 2 - 7, 13));
+      }
+    });
+
+    parts.forEach(function (p, i) {
+      var node = { x: p.x, y: 34, w: p.w, h: boxH, fill: PALETTE[i % PALETTE.length], shape: 'rect' };
+      g.appendChild(shape(s, node));
+      g.appendChild(textBlock(p.lines, p.x + p.w / 2, 34 + boxH / 2, FS));
+    });
+
+    svg.appendChild(g);
+    host.appendChild(svg);
+    return { w: width, h: height };
+  }
+
+  window.HandDrawn = {
+    render: function () {
+      var hosts = document.querySelectorAll('[data-diagram]');
+      Array.prototype.forEach.call(hosts, function (h) {
+        var spec = JSON.parse(h.getAttribute('data-diagram'));
+        h.removeAttribute('data-diagram');
+        try {
+          var size = spec.type === 'sequence' ? renderSeq(spec, h) : renderFlow(spec, h);
+          var fig = h.closest('figure');
+          if (fig && size) {
+            var svg = h.querySelector('svg');
+            var fit = function () {
+              var avail = fig.clientWidth - 30;
+              var scale = Math.min(1, avail / size.w);
+              if (fig.classList.contains('zoomed')) scale = 1;
+              svg.setAttribute('width', Math.round(size.w * scale));
+              svg.setAttribute('height', Math.round(size.h * scale));
+            };
+            fit();
+            window.addEventListener('resize', fit);
+            if (size.w > fig.clientWidth - 30) {
+              var btn = document.createElement('button');
+              btn.className = 'zoom-btn';
+              btn.textContent = '\u2295 \u539f\u5c3a\u5bf8\u67e5\u770b';
+              btn.onclick = function () {
+                fig.classList.toggle('zoomed');
+                btn.textContent = fig.classList.contains('zoomed') ? '\u2296 \u9002\u5e94\u5bbd\u5ea6' : '\u2295 \u539f\u5c3a\u5bf8\u67e5\u770b';
+                fit();
+              };
+              fig.appendChild(btn);
+            }
+          }
+        } catch (err) {
+          var pre = document.createElement('pre');
+          pre.textContent = 'diagram render error: ' + err;
+          h.appendChild(pre);
+        }
+      });
+    }
+  };
+})();
+</script>
+<script>HandDrawn.render();</script>
+</body>
+</html>

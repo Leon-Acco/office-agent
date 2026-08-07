@@ -1096,6 +1096,9 @@ async function handleLogin() {
   }
 
   resetLoginBtn(loginBtn);
+
+  // 使用公告:登录进入主应用后自动弹出一次(按版本去重),可从侧边栏「使用公告」重开
+  setTimeout(() => showAnnouncement(false), 600);
 }
 
 /**
@@ -1171,6 +1174,9 @@ function checkAuth() {
         }
       }, 200);
     }
+
+    // 使用公告:已登录刷新直入时同样弹一次(按版本去重)
+    setTimeout(() => showAnnouncement(false), 800);
     return true;
   }
   return false;
@@ -1336,10 +1342,45 @@ function bindEmployeeFilter() {
 
 
 // ====== 主初始化入口 ======
-function initApp() {
-  console.log('[app.js] Office_Agent API 集成层已加载');
+// ====== 使用公告(快速上手) ======
+// 内容维护在 /static/announcement.md,弹窗与文档中心(/doc/)共用这一份;
+// 版本号变更后会对所有用户重新自动弹出一次。
+const ANNOUNCEMENT_VERSION = '2026-08-07-v1';
 
-  // 鉴权检查：已登录则直接进入应用
+/**
+ * 展示使用公告弹窗
+ * @param {boolean} force 手动查看(侧边栏「使用公告」入口)时传 true,忽略「不再提示」标记
+ */
+async function showAnnouncement(force) {
+  if (!force && localStorage.getItem('office_agent_announcement') === ANNOUNCEMENT_VERSION) return;
+  const modal = document.getElementById('announcement-modal');
+  if (!modal) return;
+  const body = modal.querySelector('.ann-body');
+  try {
+    const res = await fetch('/static/announcement.md');
+    const md = await res.text();
+    // 优先复用聊天模块的 MD 渲染(支持标题/列表/引用/代码);不可用时退化为纯文本换行
+    body.innerHTML = (window.ChatModule && ChatModule.renderMarkdown)
+      ? ChatModule.renderMarkdown(md)
+      : '<p>' + md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>') + '</p>';
+  } catch (e) {
+    console.warn('[announcement] 公告加载失败', e);
+    body.innerHTML = '<p>公告加载失败，请稍后再试。</p>';
+  }
+  modal.classList.add('open');
+}
+
+/**
+ * 关闭公告弹窗;neverAgain=true 时记录当前版本号,之后登录不再自动弹出
+ */
+function closeAnnouncement(neverAgain) {
+  const modal = document.getElementById('announcement-modal');
+  if (modal) modal.classList.remove('open');
+  if (neverAgain) localStorage.setItem('office_agent_announcement', ANNOUNCEMENT_VERSION);
+}
+
+function initApp() {
+  console.log('[app.js] Office_Agent API 集成层已加载');  // 鉴权检查：已登录则直接进入应用
   if (typeof checkAuth === 'function' && checkAuth()) {
     console.log('[auth] 检测到有效 token，跳过登录页');
   }

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Office_Agent 文档中心</title>
+<style>
+/* 文档中心:与两份文档同套 Soft SaaS teal 皮肤 */
+:root{--ink:#22302e;--muted:#6b7d7a;--teal-600:#0D9488;--teal-700:#0F766E;--teal-800:#115E59;
+  --teal-50:#E6F7F4;--bg:#F4F8F7;--card:#ffffff;--line:#E3EEEB;
+  --shadow:0 8px 24px rgba(15,118,110,.07),0 2px 6px rgba(23,23,23,.03);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Segoe UI","PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
+  font-size:16px;line-height:1.85;}
+.wrap{max-width:960px;margin:0 auto;padding:48px 24px 80px;}
+.back-app{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--teal-700);
+  text-decoration:none;margin-bottom:28px;padding:5px 14px;border:1px solid var(--line);
+  border-radius:999px;background:var(--card);box-shadow:var(--shadow);transition:background .15s}
+.back-app:hover{background:var(--teal-50)}
+.hero h1{font-size:32px;margin:0 0 6px;letter-spacing:.5px;color:var(--teal-800)}
+.hero .subtitle{color:var(--muted);font-size:14px;margin-bottom:22px}
+/* 作者卡片(博客风) */
+.author-card{display:flex;align-items:center;gap:16px;margin:0 0 36px;padding:18px 22px;
+  background:linear-gradient(135deg,var(--teal-50),#F2FAF8);border:1px solid var(--line);
+  border-radius:18px;box-shadow:var(--shadow)}
+.author-avatar{width:56px;height:56px;flex:0 0 56px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;color:#fff;font-size:24px;font-weight:700;
+  background:linear-gradient(135deg,var(--teal-600),var(--teal-800));box-shadow:0 4px 12px rgba(13,148,136,.3)}
+.author-name{font-weight:700;font-size:17px;color:var(--ink)}
+.author-meta{font-size:13px;color:var(--muted)}
+/* 文档卡片 */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-bottom:44px;}
+.doc-card{display:block;background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:24px 24px 20px;text-decoration:none;color:inherit;box-shadow:var(--shadow);
+  transition:transform .15s,box-shadow .15s}
+.doc-card:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(15,118,110,.12),0 2px 6px rgba(23,23,23,.04)}
+.doc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  background:var(--teal-50);margin-bottom:14px}
+.doc-icon svg{width:24px;height:24px;stroke:var(--teal-700);fill:none;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.doc-card h2{font-size:19px;margin:0 0 6px;color:var(--teal-800)}
+.doc-card p{margin:0 0 14px;font-size:13.5px;color:var(--muted);line-height:1.7}
+.doc-more{font-size:13px;font-weight:600;color:var(--teal-700)}
+/* 快速上手(MD 渲染区) */
+.quickstart{background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:30px 34px 26px;box-shadow:var(--shadow)}
+.quickstart h2{font-size:22px;margin:0 0 14px;color:var(--teal-800)}
+.md-body h2{font-size:20px;margin:30px 0 10px;padding-left:12px;color:var(--teal-800);
+  border-left:4px solid var(--teal-600)}
+.md-body h3{font-size:17px;margin:24px 0 8px;color:var(--teal-700)}
+.md-body h4{font-size:15.5px;margin:18px 0 6px}
+.md-body p{margin:10px 0;font-size:15px}
+.md-body ul,.md-body ol{margin:10px 0;padding-left:24px;font-size:15px}
+.md-body li{margin:4px 0}
+.md-body blockquote{margin:12px 0;padding:10px 16px;background:var(--teal-50);
+  border-left:4px solid var(--teal-600);border-radius:0 10px 10px 0;color:#3d4f4c;font-size:14px}
+.md-body code{background:var(--teal-50);border:1px solid var(--line);border-radius:6px;padding:1px 6px;
+  font-size:13px;color:var(--teal-800);font-family:"SFMono-Regular",Consolas,monospace}
+.md-body hr{border:none;border-top:1px solid var(--line);margin:24px 0}
+.md-body a{color:var(--teal-700)}
+.md-loading{color:var(--muted);font-size:14px}
+.footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12.5px;color:var(--muted)}
+.footer a{color:var(--teal-700);text-decoration:none}
+@media(max-width:640px){.wrap{padding:28px 14px 60px}.quickstart{padding:22px 18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-app" href="/">← 返回 Agent 办公室</a>
+
+  <div class="hero">
+    <h1>Office_Agent 文档中心</h1>
+    <div class="subtitle">设计文档 · 产品方案 · 快速上手</div>
+  </div>
+
+  <div class="author-card">
+    <div class="author-avatar">张</div>
+    <div>
+      <div class="author-name">张朝</div>
+      <div class="author-meta">作者 · Office_Agent 的设计与实现者 · 这里记录了这套系统「为什么长这样」</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <a class="doc-card" href="/doc/office_agent_design.html">
+      <div class="doc-icon">
+        <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5z"/><path d="M8 7.5h8M8 11h8M8 14.5h5"/></svg>
+      </div>
+      <h2>设计文档</h2>
+      <p>架构与 Agent 实现细节:三级分诊、ReAct 主循环、检索与记忆、工具契约、并发与失败模式,以及每个关键取舍背后的理由。</p>
+      <span class="doc-more">阅读设计文档 →</span>
+    </a>
+    <a class="doc-card" href="/doc/office_agent_prd.html">
+      <div class="doc-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg>
+      </div>
+      <h2>产品文档(PRD)</h2>
+      <p>产品定位与方案:要解决什么问题、目标用户与典型场景、七大功能页面清单、治理与安全能力、当前边界与下一步建议。</p>
+      <span class="doc-more">阅读产品文档 →</span>
+    </a>
+  </div>
+
+  <section class="quickstart">
+    <h2>快速上手</h2>
+    <div class="md-body" id="quickstart-body"><span class="md-loading">公告加载中…</span></div>
+  </section>
+
+  <footer class="footer">
+    <span>Office_Agent 文档中心 · 作者 张朝</span>
+    <span><a href="/">返回应用</a></span>
+  </footer>
+</div>
+
+<script>
+/* 简易 Markdown 渲染:标题/加粗/列表/引用/行内代码/链接,足够承载公告 */
+function renderMd(md) {
+  var esc = function (s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var inline = function (s) {
+    return esc(s)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  };
+  var lines = md.split(/\r?\n/), html = '', listType = null, m, i, line;
+  var closeList = function () { if (listType) { html += listType === 'ol' ? '</ol>' : '</ul>'; listType = null; } };
+  for (i = 0; i < lines.length; i++) {
+    line = lines[i].trimEnd();
+    if (!line.trim()) { closeList(); continue; }
+    if ((m = line.match(/^(#{1,4})\s+(.*)/))) { closeList(); html += '<h' + (m[1].length + 1) + '>' + inline(m[2]) + '</h' + (m[1].length + 1) + '>'; continue; }
+    if (/^---+$/.test(line.trim())) { closeList(); html += '<hr>'; continue; }
+    if ((m = line.match(/^>\s?(.*)/))) { closeList(); html += '<blockquote>' + inline(m[1]) + '</blockquote>'; continue; }
+    if ((m = line.match(/^[-*]\s+(.*)/))) { if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; } html += '<li>' + inline(m[1]) + '</li>'; continue; }
+    if ((m = line.match(/^\d+[.)]\s+(.*)/))) { if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; } html += '<li>' + inline(m[1]) + '</li>'; continue; }
+    closeList();
+    html += '<p>' + inline(line) + '</p>';
+  }
+  closeList();
+  return html;
+}
+/* 公告与应用内弹窗共用同一份 /static/announcement.md */
+fetch('/static/announcement.md').then(function (r) { return r.text(); }).then(function (md) {
+  document.getElementById('quickstart-body').innerHTML = renderMd(md);
+}).catch(function () {
+  document.getElementById('quickstart-body').innerHTML = '<p class="md-loading">公告加载失败,请稍后再试。</p>';
+});
+</script>
+</body>
+</html>
