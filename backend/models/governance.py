@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy import String, Text, DateTime, Integer, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.database import Base
+from backend.database import Base, now_cn
 
 
 def _uuid() -> str:
@@ -44,7 +44,7 @@ class RolePackVersion(Base):
     eval_report_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     published_by: Mapped[str] = mapped_column(String(100), default="")
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
 
 
 # ═══════════════════════════════════════════════
@@ -75,9 +75,9 @@ class ChangeRequest(Base):
     requested_by: Mapped[str] = mapped_column(String(100), default="admin")
     reason: Mapped[str] = mapped_column(Text, default="")
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),
-                                                   onupdate=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn,
+                                                   onupdate=now_cn)
 
 
 class ChangeApproval(Base):
@@ -93,7 +93,7 @@ class ChangeApproval(Base):
     approver_role: Mapped[str] = mapped_column(String(50), default="")  # 治理角色
     decision: Mapped[str] = mapped_column(String(16))  # APPROVE/REJECT
     comment: Mapped[str] = mapped_column(Text, default="")
-    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
 
 
 # ═══════════════════════════════════════════════
@@ -115,7 +115,7 @@ class PolicyRule(Base):
     version: Mapped[int] = mapped_column(Integer, default=1)  # 版本号（追加式）
     state: Mapped[str] = mapped_column(String(16), default="ACTIVE")  # ACTIVE/DISABLED
     effective_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
 
 
 # ═══════════════════════════════════════════════
@@ -133,7 +133,7 @@ class GovRole(Base):
     user_id: Mapped[str] = mapped_column(String(100), index=True)  # 用户标识
     role: Mapped[str] = mapped_column(String(50))  # 治理角色
     scope: Mapped[str] = mapped_column(String(100), default="*")  # 作用范围（部门/领域/*）
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
 
 
 # ═══════════════════════════════════════════════
@@ -164,7 +164,7 @@ class Repository(Base):
     auto_refresh_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 上次同步(拉取)时间,手动 pull / 定时刷新都会更新
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
 
 
 class AgentRepoBinding(Base):
@@ -174,4 +174,4 @@ class AgentRepoBinding(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
     agent_id: Mapped[str] = mapped_column(String(32), index=True)
     repo_id: Mapped[str] = mapped_column(String(32), index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)

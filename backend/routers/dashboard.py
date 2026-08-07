@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database import get_db
+from backend.database import get_db, now_cn
 from backend.models.company import Department, Domain
 from backend.models.agent import Agent
 from backend.models.session import Session, Message
@@ -138,7 +138,7 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
     ]
 
     # === 2. 图表数据：按天聚合最近 7 天的会话数与回答数（均为真实统计）===
-    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    seven_days_ago = now_cn() - timedelta(days=7)
     recent_sessions = (await db.execute(
         select(
             func.date(Session.created_at).label("dt"),

@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database import get_db
+from backend.database import get_db, now_cn
 from backend.models.governance import (
     RolePackVersion, ChangeRequest, ChangeApproval, PolicyRule, GovRole,
     Repository, AgentRepoBinding,
@@ -230,7 +230,7 @@ async def canary_pack_version(version_id: str, body: PublishBody, db: AsyncSessi
     v.state = "CANARY"
     v.rollout = body.rollout
     v.published_by = body.published_by
-    v.published_at = datetime.now(timezone.utc)
+    v.published_at = now_cn()
     await db.flush()
 
     db.add(AuditLog(id=_uuid(), actor=body.published_by, action="canary",
@@ -357,7 +357,7 @@ async def activate_policy(rule_id: str, db: AsyncSession = Depends(get_db)):
         old.state = "DISABLED"
     r.state = "ACTIVE"
     if not r.effective_from:
-        r.effective_from = datetime.now(timezone.utc)
+        r.effective_from = now_cn()
     await db.flush()
     db.add(AuditLog(id=_uuid(), actor="admin", action="activate",
                    target_type="policy_rule", target_id=rule_id,
@@ -393,6 +393,7 @@ async def list_knowledge_candidates(
             "id": k.id, "title": k.title, "domain": k.domain, "department": k.department,
             "state": k.state, "scope": k.scope, "confidence": k.confidence,
             "owner": k.owner, "reviewed_by": k.reviewed_by,
+            "body_md": k.body_md or "",  # 审核队列需要查看正文
             "expires_at": k.expires_at.strftime("%Y-%m-%d") if k.expires_at else "",
             "created_at": k.created_at.strftime("%Y-%m-%d %H:%M:%S") if k.created_at else "",
         }
@@ -414,7 +415,7 @@ async def review_knowledge_candidate(kc_id: str, body: KnowledgeReviewBody, db: 
         kc.scope = body.scope  # 显式确认范围（越权升级防护）
         kc.reviewed_by = body.reviewer
         kc.status = "published"
-        kc.published_at = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        kc.published_at = now_cn().strftime("%Y-%m-%d")
     else:
         kc.state = "REJECTED"
         kc.reviewed_by = body.reviewer

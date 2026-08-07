@@ -1332,6 +1332,11 @@ const ChatModule = {
             ${fullCanvasBtn}
           </div>
           <div style="display:flex;gap:8px;">
+            <button title="沉淀为知识(提交审核,通过后全员可检索)" onclick="ChatModule.openKnowledgeDialog(${msgIdx})"
+              style="width:32px;height:32px;background:white;border:1px solid var(--border-default);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);transition:all 0.15s;"
+              onmouseover="this.style.borderColor='var(--teal-600, #0D9488)';this.style.color='var(--teal-600, #0D9488)'" onmouseout="this.style.borderColor='var(--border-default)';this.style.color='var(--text-secondary)'">
+              <span class="material-symbols-outlined" style="font-size:16px;">bookmark_add</span>
+            </button>
             <button title="复制回答" onclick="ChatModule.copyAnswer(${msgIdx}, this)"
               style="width:32px;height:32px;background:white;border:1px solid var(--border-default);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);transition:all 0.15s;"
               onmouseover="this.style.borderColor='var(--teal-600, #0D9488)';this.style.color='var(--teal-600, #0D9488)'" onmouseout="this.style.borderColor='var(--border-default)';this.style.color='var(--text-secondary)'">
@@ -1393,6 +1398,97 @@ const ChatModule = {
       console.warn('[chat] 评价提交失败,回滚', e);
       msg.feedback = prev;  // 失败回滚
       this.renderMessages();
+    }
+  },
+
+  /**
+   * 打开「沉淀为知识」对话框:标题默认取最近一条用户提问,正文默认取回答原文(可编辑)
+   * 提交后进入知识候选审核队列(管理与治理 → 权限与审计),审核通过后全员可检索
+   */
+  openKnowledgeDialog(msgIdx) {
+    const session = this.sessions[this.currentSessionId];
+    if (!session || !session.messages) return;
+    const msg = session.messages[msgIdx];
+    if (!msg || !msg.content) return;
+    // 向上找最近一条用户提问作为默认标题
+    let question = '';
+    for (let i = msgIdx - 1; i >= 0; i--) {
+      if (session.messages[i].role === 'user') { question = (session.messages[i].content || '').trim(); break; }
+    }
+    // 记录来源,提交时回传(候选可追溯到来历会话/回答)
+    this._kcSource = { sessionId: this.currentSessionId || '', answerId: msg.messageId || '' };
+    let dlg = document.getElementById('kc-dialog');
+    if (!dlg) {
+      dlg = document.createElement('div');
+      dlg.id = 'kc-dialog';
+      dlg.style.cssText = 'position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(17,94,89,.18);backdrop-filter:blur(6px);';
+      dlg.innerHTML = `
+        <div style="width:640px;max-width:92vw;max-height:86vh;display:flex;flex-direction:column;background:rgba(255,255,255,.94);border:1px solid #E3EEEB;border-radius:20px;box-shadow:0 24px 64px rgba(15,118,110,.18);overflow:hidden;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid #E3EEEB;">
+            <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;color:#115E59;">
+              <span class="material-symbols-outlined" style="font-size:20px;">bookmark_add</span><span>沉淀为知识</span>
+            </div>
+            <button onclick="ChatModule.closeKnowledgeDialog()" style="width:30px;height:30px;border:none;background:transparent;border-radius:8px;cursor:pointer;color:#6b7d7a;display:flex;align-items:center;justify-content:center;">
+              <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+            </button>
+          </div>
+          <div style="padding:18px 22px;overflow:auto;">
+            <div style="font-size:13px;font-weight:600;color:#334340;margin-bottom:6px;">知识标题</div>
+            <input id="kc-title" maxlength="120" placeholder="给这条结论起个标题"
+              style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid #E3EEEB;border-radius:10px;font-size:14px;outline:none;background:white;">
+            <div style="font-size:13px;font-weight:600;color:#334340;margin:14px 0 6px;">知识正文(Markdown,可编辑)</div>
+            <textarea id="kc-body" rows="10"
+              style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #E3EEEB;border-radius:10px;font-size:13px;line-height:1.7;outline:none;resize:vertical;background:white;font-family:inherit;"></textarea>
+            <p style="font-size:12px;color:#6b7d7a;margin:10px 0 0;">提交后进入审核队列(管理与治理 → 权限与审计),审核通过后全员可检索。</p>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;padding:14px 22px;border-top:1px solid #E3EEEB;">
+            <button onclick="ChatModule.closeKnowledgeDialog()"
+              style="padding:8px 18px;border:1px solid #E3EEEB;background:white;border-radius:999px;cursor:pointer;font-size:13px;color:#334340;">取消</button>
+            <button id="kc-submit" onclick="ChatModule.submitKnowledgeCandidate()"
+              style="padding:8px 20px;border:none;border-radius:999px;cursor:pointer;font-size:13px;font-weight:600;color:white;background:linear-gradient(135deg,#0D9488,#115E59);box-shadow:0 4px 12px rgba(13,148,136,.3);">提交审核</button>
+          </div>
+        </div>`;
+      // 点遮罩关闭
+      dlg.addEventListener('click', (e) => { if (e.target === dlg) ChatModule.closeKnowledgeDialog(); });
+      document.body.appendChild(dlg);
+    }
+    document.getElementById('kc-title').value = question.slice(0, 60);
+    document.getElementById('kc-body').value = msg.content;
+    dlg.style.display = 'flex';
+  },
+
+  /** 关闭「沉淀为知识」对话框 */
+  closeKnowledgeDialog() {
+    const dlg = document.getElementById('kc-dialog');
+    if (dlg) dlg.style.display = 'none';
+  },
+
+  /** 提交知识候选到审核队列 */
+  async submitKnowledgeCandidate() {
+    const title = document.getElementById('kc-title').value.trim();
+    const body = document.getElementById('kc-body').value.trim();
+    if (!title || !body) { Toast.warning('标题与正文不能为空'); return; }
+    const btn = document.getElementById('kc-submit');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/knowledge/candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title, body_md: body,
+          source_session_id: this._kcSource?.sessionId || '',
+          source_answer_id: this._kcSource?.answerId || '',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || '提交失败');
+      this.closeKnowledgeDialog();
+      Toast.success(data.message || '已提交为知识候选');
+    } catch (e) {
+      console.warn('[chat] 沉淀为知识失败', e);
+      Toast.error(`提交失败: ${e.message}`);
+    } finally {
+      btn.disabled = false;
     }
   },
 

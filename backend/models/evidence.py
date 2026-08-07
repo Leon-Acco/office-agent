@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy import String, Text, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.database import Base
+from backend.database import Base, now_cn
 
 
 def _uuid() -> str:
@@ -29,4 +29,4 @@ class Evidence(Base):
     verification_status: Mapped[str] = mapped_column(String(20), default="VERIFIED")  # VERIFIED/UNVERIFIED
     line_start: Mapped[int | None] = mapped_column(Integer, nullable=True)
     line_end: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)

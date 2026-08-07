@@ -2,10 +2,21 @@
 数据库连接与会话管理
 MySQL 8.0 + SQLAlchemy 2.x 异步引擎
 """
+from datetime import datetime, timedelta, timezone
+
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
 from backend.config import DATABASE_URL
+
+# 业务统一使用东八区时间;MySQL DATETIME 不存时区,
+# 这里直接产出 naive 的东八区墙钟时间,保证存取无歧义
+CN_TZ = timezone(timedelta(hours=8))
+
+
+def now_cn() -> datetime:
+    """当前东八区时间(naive,与 MySQL DATETIME 往返一致)"""
+    return datetime.now(CN_TZ).replace(tzinfo=None)
 
 # 异步引擎（pool 参数在引擎层管理）
 engine = create_async_engine(

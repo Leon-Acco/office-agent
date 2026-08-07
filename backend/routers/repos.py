@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.database import get_db
+from backend.database import get_db, now_cn
 from backend.models.governance import Repository
 from backend.services import git_service
 
@@ -31,8 +31,8 @@ router = APIRouter(prefix="/api/repos", tags=["repositories"])
 
 
 def _utcnow_naive() -> datetime:
-    """UTC 当前时间(naive)——MySQL DATETIME 不带时区,与 created_at 读取回来越比较一致"""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    """东八区当前时间(naive)——MySQL DATETIME 不带时区,与 created_at 比较口径一致"""
+    return now_cn()
 
 
 class CloneRequest(BaseModel):

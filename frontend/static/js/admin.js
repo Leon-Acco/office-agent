@@ -1020,6 +1020,10 @@ const AdminModule = {
             <li>✓ 证据打开时执行二次 ACL 校验</li>
           </ul>
         </div>
+        <h4 style="font-size:14px;font-weight:600;margin-bottom:12px;"><span class="material-symbols-outlined" style="font-size:15px;vertical-align:-2px;">fact_check</span> 知识候选审核</h4>
+        <div id="kc-review-queue" style="margin-bottom:24px;">
+          <div style="text-align:center;padding:20px;color:var(--text-tertiary);font-size:13px;">加载中…</div>
+        </div>
         <h4 style="font-size:14px;font-weight:600;margin-bottom:12px;"><span class="material-symbols-outlined" style="font-size:15px;vertical-align:-2px;">assignment</span> 审计日志</h4>
     `;
 
@@ -1042,6 +1046,77 @@ const AdminModule = {
     }
     html += '</div>';
     container.innerHTML = html;
+    // 异步加载知识候选审核队列(SUBMITTED/IN_REVIEW 可操作)
+    this.loadKnowledgeCandidates();
+  },
+
+  /**
+   * 加载知识候选审核队列(对话沉淀入口提交的候选在这里审核)
+   */
+  async loadKnowledgeCandidates() {
+    const wrap = document.getElementById('kc-review-queue');
+    if (!wrap) return;
+    try {
+      const res = await fetch('/api/gov/knowledge-candidates?limit=50');
+      const items = await res.json();
+      if (!Array.isArray(items) || items.length === 0) {
+        wrap.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-tertiary);font-size:13px;">暂无知识候选</div>';
+        return;
+      }
+      const stateMeta = {
+        SUBMITTED: { label: '待审核', color: '#B45309', bg: '#FFFBEB' },
+        IN_REVIEW: { label: '审核中', color: '#2563EB', bg: '#EFF6FF' },
+        APPROVED:  { label: '已通过', color: '#059669', bg: '#ECFDF5' },
+        REJECTED:  { label: '已驳回', color: '#DC2626', bg: '#FEF2F2' },
+        EXPIRED:   { label: '已失效', color: '#737373', bg: '#F5F5F5' },
+      };
+      const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      let html = '';
+      items.forEach(k => {
+        const st = stateMeta[k.state] || { label: k.state, color: '#737373', bg: '#F5F5F5' };
+        const actionable = ['SUBMITTED', 'IN_REVIEW', 'EXPIRED'].includes(k.state);
+        html += `
+          <div style="border:1px solid var(--border-default);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:white;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <span style="font-weight:600;font-size:13.5px;">${esc(k.title)}</span>
+              <span style="font-size:11px;padding:2px 8px;border-radius:10px;color:${st.color};background:${st.bg};">${st.label}</span>
+              <span style="font-size:12px;color:var(--text-tertiary);">${esc(k.owner)} · ${esc(k.domain)} · ${esc(k.created_at)}</span>
+              <span style="margin-left:auto;display:flex;gap:8px;">
+                ${actionable ? `
+                <button onclick="AdminModule.reviewKnowledgeCandidate('${k.id}','APPROVE')"
+                  style="padding:4px 12px;border:none;border-radius:999px;background:#0D9488;color:white;font-size:12px;cursor:pointer;">通过</button>
+                <button onclick="AdminModule.reviewKnowledgeCandidate('${k.id}','REJECT')"
+                  style="padding:4px 12px;border:1px solid #DC2626;border-radius:999px;background:white;color:#DC2626;font-size:12px;cursor:pointer;">驳回</button>` : ''}
+              </span>
+            </div>
+            ${k.body_md ? `<details style="margin-top:8px;"><summary style="font-size:12px;color:var(--text-tertiary);cursor:pointer;">查看正文</summary><pre style="white-space:pre-wrap;font-size:12.5px;line-height:1.7;background:#F7FBFA;border-radius:8px;padding:10px 12px;margin:8px 0 0;max-height:260px;overflow:auto;">${esc(k.body_md)}</pre></details>` : ''}
+          </div>`;
+      });
+      wrap.innerHTML = html;
+    } catch (e) {
+      console.warn('[admin] 知识候选队列加载失败', e);
+      wrap.innerHTML = '<div style="text-align:center;padding:20px;color:#DC2626;font-size:13px;">加载失败,请刷新重试</div>';
+    }
+  },
+
+  /**
+   * 审核知识候选(通过/驳回),通过后进入共享检索
+   */
+  async reviewKnowledgeCandidate(id, decision) {
+    try {
+      const res = await fetch(`/api/gov/knowledge-candidates/${id}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision, reviewer: 'admin', scope: 'COMPANY' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || '审核失败');
+      Toast.success(data.message || '审核完成');
+      this.loadKnowledgeCandidates();
+    } catch (e) {
+      console.warn('[admin] 知识候选审核失败', e);
+      Toast.error(`审核失败: ${e.message}`);
+    }
   },
 
   /**

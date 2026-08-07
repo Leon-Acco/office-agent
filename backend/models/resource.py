@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from sqlalchemy import String, Text, DateTime, Integer, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.database import Base
+from backend.database import Base, now_cn
 
 
 def _uuid() -> str:
@@ -30,7 +30,7 @@ class Resource(Base):
     owner: Mapped[str] = mapped_column(String(100), default="")
     # 上传文档解析后的 Markdown 全文(入库后跨机可读,不再依赖各机本地 uploads 目录)
     content: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
 
 
 class Skill(Base):
@@ -58,7 +58,7 @@ class Skill(Base):
     test_samples_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)  # 测试样本引用
     instructions: Mapped[str] = mapped_column(Text, default="")  # SKILL.md 式 markdown 指令体
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
 
 
 class Tool(Base):
@@ -91,7 +91,7 @@ class Tool(Base):
     input_schema: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     output_schema: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
 
 
 class AuditLog(Base):
@@ -116,4 +116,4 @@ class AuditLog(Base):
     resource_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)  # 资源哈希（脱敏）
     commit_sha: Mapped[str | None] = mapped_column(String(40), nullable=True)  # Git commit SHA
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)

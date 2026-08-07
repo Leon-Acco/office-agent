@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 
-from backend.database import async_session
+from backend.database import async_session, now_cn
 
 
 async def auto_refresh_loop():
@@ -31,8 +31,8 @@ async def auto_refresh_loop():
                     )
                 )).scalars().all()
 
-                # MySQL DATETIME 不带时区,统一用 naive UTC 比较
-                now = datetime.now(timezone.utc).replace(tzinfo=None)
+                # MySQL DATETIME 不带时区,统一用东八区 naive 时间比较
+                now = now_cn()
 
                 for r in rows:
                     # 未到刷新时间的跳过

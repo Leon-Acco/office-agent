@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from sqlalchemy import String, Text, DateTime, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
-from backend.database import Base
+from backend.database import Base, now_cn
 
 
 def _uuid() -> str:
@@ -49,4 +49,4 @@ class KnowledgeCandidate(Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # 失效时间
     reviewed_by: Mapped[str] = mapped_column(String(100), default="")  # 审核人
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)

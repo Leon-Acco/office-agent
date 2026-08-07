@@ -4,6 +4,7 @@
 """
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from backend.database import get_db
@@ -55,6 +56,39 @@ async def get_knowledge(knowledge_id: str, db = Depends(get_db)):
     if not entry:
         raise HTTPException(status_code=404, detail="知识条目不存在")
     return _knowledge_to_dict(entry)
+
+
+class KnowledgeCandidateSubmit(BaseModel):
+    """对话结论沉淀为知识候选的提交体"""
+    title: str
+    body_md: str
+    domain: str = ""
+    department: str = ""
+    owner: str = ""
+    source_session_id: Optional[str] = None  # 来源会话
+    source_answer_id: Optional[str] = None   # 来源回答消息 id
+
+
+@router.post("/candidates")
+async def submit_knowledge_candidate(body: KnowledgeCandidateSubmit, db = Depends(get_db)):
+    """把对话结论提交为知识候选,进入审核队列(SUBMITTED);
+    审核通过(APPROVED/published)后才参与共享检索,见 governance.review_knowledge_candidate"""
+    if not body.title.strip() or not body.body_md.strip():
+        raise HTTPException(status_code=400, detail="标题与正文不能为空")
+    kc = KnowledgeCandidate(
+        title=body.title.strip()[:300],
+        domain=body.domain.strip() or "通用",
+        department=body.department.strip() or "综合",
+        body_md=body.body_md.strip(),
+        owner=body.owner.strip() or "访客用户",
+        status="pending_review",
+        state="SUBMITTED",
+        source_session_id=body.source_session_id,
+        source_answer_id=body.source_answer_id,
+    )
+    db.add(kc)
+    await db.commit()  # 立即提交,审核队列依赖数据可见性
+    return {"ok": True, "id": kc.id, "state": kc.state, "message": "已提交为知识候选,审核通过后全员可检索"}
 
 
 def _knowledge_to_dict(k: KnowledgeCandidate) -> dict:

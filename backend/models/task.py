@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.database import Base
+from backend.database import Base, now_cn
 
 
 def _uuid() -> str:
@@ -30,7 +30,7 @@ class TaskCard(Base):
     tags: Mapped[list] = mapped_column(JSON, default=list)  # 如 release/2.14
     conflict_note: Mapped[str | None] = mapped_column(Text, nullable=True)  # 冲突/汇总提示
     result_doc_path: Mapped[str | None] = mapped_column(String(500), nullable=True)  # 完整方案 md 文件名（collab_docs 下）
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
 
     assignments: Mapped[list["TaskAssignment"]] = relationship(back_populates="task_card", cascade="all, delete-orphan")
 
@@ -55,6 +55,6 @@ class TaskAssignment(Base):
     status: Mapped[str] = mapped_column(String(20), default="analyzing")  # analyzing/submitted/discussing/discussed/clarify
     discussion_note: Mapped[str | None] = mapped_column(Text, nullable=True)  # 第 2 轮互评内容（站在本岗位对他人草案的补充/质疑/完善）
     confidence: Mapped[str | None] = mapped_column(String(20), nullable=True)  # HIGH/MEDIUM/LOW
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
 
     task_card: Mapped["TaskCard"] = relationship(back_populates="assignments")

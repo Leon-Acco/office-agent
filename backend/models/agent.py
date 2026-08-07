@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from backend.database import Base
+from backend.database import Base, now_cn
 
 
 def _uuid() -> str:
@@ -24,7 +24,7 @@ class RolePack(Base):
     owner: Mapped[str] = mapped_column(String(100), default="")
     # YAML/JSON 格式的完整岗位配置
     config: Mapped[dict] = mapped_column(JSON, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
 
     agents: Mapped[list["Agent"]] = relationship(back_populates="role_pack")
 
@@ -69,8 +69,8 @@ class Agent(Base):
     adoption_rate: Mapped[int] = mapped_column(Integer, default=0)  # 采纳率 %
     session_count: Mapped[int] = mapped_column(Integer, default=0)  # 会话总数
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_cn, onupdate=now_cn)
 
     # 关联
     domain: Mapped["Domain"] = relationship(back_populates="agents")
