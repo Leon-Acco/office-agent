@@ -1131,6 +1131,11 @@ const AdminModule = {
         { name: 'name', label: '岗位名称', type: 'text', value: val('name'), required: true },
         { name: 'version', label: '版本', type: 'text', value: val('version', '1.0.0') },
         { name: 'owner', label: 'Owner', type: 'text', value: val('owner') },
+        // 工具白名单（MCP 权限控制入口）：存 config.tools，运行时按名称匹配内置工具或 MCP Server
+        // 空数组=全部内置工具放开（MCP 不会加载）；非空=仅勾选项可用（MCP 须显式勾选才注入）
+        { name: 'tools', label: '工具白名单（内置工具 + MCP Server；全不勾=仅放开全部内置工具）', type: 'multiselect',
+          value: (item && item.config && Array.isArray(item.config.tools)) ? item.config.tools : [],
+          source: '/api/admin/tools/options', valueKey: 'value', labelKey: 'label' },
       ],
       'agents': [
         { name: 'name', label: '员工姓名', type: 'text', value: val('name'), required: true },
@@ -1571,6 +1576,13 @@ const AdminModule = {
     form.querySelectorAll('input[type="checkbox"][name]').forEach(c => multiNames.add(c.name));
     formData.forEach((v, k) => { if (!multiNames.has(k)) body[k] = v; });
     multiNames.forEach(k => { body[k] = formData.getAll(k); });
+
+    // 岗位包：工具白名单收进 config.tools，其余 config 键（权限/承诺/资源等）原样保留
+    if (tab === 'role-packs') {
+      const existing = itemId ? ((this.cache[tab] || []).find(i => i.id === itemId) || {}) : {};
+      body.config = { ...(existing.config || {}), tools: body.tools || [] };
+      delete body.tools;
+    }
 
     const method = itemId ? 'PUT' : 'POST';
     const url = itemId

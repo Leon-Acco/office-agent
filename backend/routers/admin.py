@@ -567,6 +567,27 @@ async def list_tools(db: AsyncSession = Depends(get_db)):
              "read_only": t.read_only, "owner": t.owner, "status": t.status} for t in tools]
 
 
+# 内置工具白名单（与 frontdesk._load_role_pack_spec 默认配置保持一致，共 10 个）
+_BUILTIN_TOOL_NAMES = [
+    "searchKnowledge", "getEmployeeInfo", "searchResource", "loadSkill",
+    "searchCode", "getCodeExcerpt", "listFiles", "cloneRepo",
+    "getProjectStructure", "searchInDocs",
+]
+
+
+@router.get("/tools/options")
+async def list_tool_options(db: AsyncSession = Depends(get_db)):
+    """
+    岗位包工具白名单的可选项聚合：内置工具 + 已接入的 MCP Server / API 工具
+    运行时按名称匹配：命中内置名 → 内置工具；否则视为 MCP Server 名（见 runtime/context.py）
+    """
+    options = [{"value": n, "label": f"{n}（内置工具）", "kind": "builtin"} for n in _BUILTIN_TOOL_NAMES]
+    tools = (await db.execute(select(Tool).order_by(Tool.created_at.desc()))).scalars().all()
+    for t in tools:
+        options.append({"value": t.name, "label": f"{t.name}（{t.type or 'mcp'}）", "kind": t.type or "mcp"})
+    return options
+
+
 class ToolTestConnBody(BaseModel):
     endpoint: str
     config: str = ""
@@ -640,7 +661,8 @@ class RolePackBody(BaseModel):
     name: str
     version: str = "1.0.0"
     owner: str = ""
-    config: dict = {}  # JSON 格式的完整岗位配置（资源/Skill/Tool/权限/承诺）
+    # None = 未提交（编辑表单不含 config 字段时不得清空已有配置）；{} = 显式清空
+    config: dict | None = None
 
 
 @router.get("/role-packs")
@@ -664,7 +686,10 @@ async def update_role_pack(pid: str, body: RolePackBody, db: AsyncSession = Depe
     if not p:
         raise HTTPException(404, "岗位包不存在")
     p.name, p.version, p.owner = body.name, body.version, body.owner
-    p.config = body.config or {}
+    # 仅当请求显式携带 config 时才覆盖：编辑表单可能不含 config 字段，
+    # 若无条件 body.config or {} 会把岗位包配置（工具白名单/权限/承诺）清空
+    if body.config is not None:
+        p.config = body.config
     await db.flush()
     return {"message": "岗位包更新成功"}
 
