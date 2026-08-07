@@ -89,6 +89,10 @@ class AgentContext:
     # 取代 agents_md 里手写的易漂移仓库清单
     repo_details: list[dict] = field(default_factory=list)
 
+    # 资源中心已上传文档的名称清单,prompt 渲染「已上传文档」用:
+    # 让 LLM 知道文档存在、可经 searchResource 按名检索读正文(否则只会闷头搜代码仓库)
+    doc_resources: list[str] = field(default_factory=list)
+
     # 预算
     budget: Budget = field(default_factory=Budget)
 
@@ -194,6 +198,17 @@ async def build_context(
     except Exception:
         pass  # 绑定解析失败不阻断执行，保持全局检索
 
+    # 资源中心已上传文档清单（只取名称,prompt 展示用;上限 20 条防膨胀）
+    # 失败静默降级为空列表 = 不渲染文档段,不影响主流程
+    doc_resources: list[str] = []
+    try:
+        from backend.models.resource import Resource
+        doc_resources = (await db.execute(
+            select(Resource.name).where(Resource.type == "document").limit(20)
+        )).scalars().all()
+    except Exception:
+        pass  # 文档清单加载失败不阻断执行
+
     # 从 Message 表加载历史（借鉴 nanobot session 回放）
     history = []
     try:
@@ -227,6 +242,7 @@ async def build_context(
         allowed_repos=allowed_repos,
         default_repo=default_repo,
         repo_details=repo_details,
+        doc_resources=doc_resources,
         budget=budget,
         history=history,
     )
@@ -257,10 +273,15 @@ def build_system_prompt(context: AgentContext) -> str:
         for r in context.repo_details:
             desc = f" — {r['description']}" if r.get("description") else ""
             prompt += f"  - 💻 {r['name']}{desc}\n"
+    # 资源中心已上传文档（searchResource 按名称命中可直接返回正文阅读）
+    if context.doc_resources:
+        prompt += "  已上传文档（问文档内容时调 searchResource 按名称检索，可直接阅读正文）：\n"
+        for name in context.doc_resources:
+            prompt += f"  - 📄 {name}\n"
     # resources 字符串列表降级为补充展示（不再作为任何逻辑输入）
     for r in context.resources:
         prompt += f"  - {r}\n"
-    if not context.repo_details and not context.resources:
+    if not context.repo_details and not context.doc_resources and not context.resources:
         prompt += "  （未绑定专属资源，可全局检索）\n"
 
     # AGENTS.md 行为准则（Harness Engineering：员工级人格/边界指令，截断防 prompt 膨胀）
@@ -277,7 +298,7 @@ def build_system_prompt(context: AgentContext) -> str:
         tool_descs = {
             "searchKnowledge": f"searchKnowledge(query, domain?) - 搜索已审核通过的知识库，查找业务文档、FAQ、最佳实践。当你需要查找业务知识、规范、流程时调用。（默认按「{context.domain_name}」领域过滤）" if context.domain_name and context.domain_name != "通用" else "searchKnowledge(query, domain?) - 搜索已审核通过的知识库，查找业务文档、FAQ、最佳实践。当你需要查找业务知识、规范、流程时调用。",
             "getEmployeeInfo": 'getEmployeeInfo(keyword) - 查找公司内的 AI 员工信息，包括姓名、职位、所属部门、专业领域。当用户问"谁负责""有哪些员工"时调用。',
-            "searchResource": "searchResource(keyword, type?) - 搜索公司资源库（代码仓库、API 文档、数据集）。当用户需要查找资源信息时调用。",
+            "searchResource": "searchResource(keyword, type?) - 搜索公司资源库（代码仓库、API 文档、数据集、已上传文档）。文档类资源按名称命中后直接返回正文内容，可阅读。当用户提到具体文档名（如《xxx指引.md》）或要查文档内容时，优先调用。",
             "searchCode": search_code_desc,
             "getCodeExcerpt": "getCodeExcerpt(repo_id, file_path, start_line?, end_line?) - 读取代码文件的指定片段。查看函数实现、配置内容时调用。",
             "listFiles": "listFiles(repo_id, subdir?, pattern?) - 列出仓库文件结构。了解项目结构时调用。",
@@ -331,6 +352,7 @@ def build_system_prompt(context: AgentContext) -> str:
 ## 工具调用示例
 用户问"公司有哪些员工" -> 调用 getEmployeeInfo(keyword="员工")
 用户问"搜索支付文档" -> 调用 searchKnowledge(query="支付")
+用户问"《新车联网平台接口对接指引》里怎么规定的" -> 调用 searchResource(keyword="新车联网平台接口对接指引")
 用户问"有哪些API文档" -> 调用 searchResource(keyword="API", type="document")
 用户问"帮我 clone 这个仓库 https://github.com/xxx" -> 调用 cloneRepo(git_url="...", repo_id="xxx")
 用户问"搜索 createOrder 函数" -> 调用 searchCode(repo_id="xxx", query="createOrder")

@@ -185,6 +185,16 @@ class SearchResourceTool(Tool):
 
     async def execute(self, db: AsyncSession, keyword: str = "", type: str = "") -> ToolResult:
         """执行搜索：名称命中返回正文预览；名称无命中则退到正文 LIKE 检索并返回命中片段"""
+        from backend.services import file_service  # 函数内 import，避免模块级循环依赖
+
+        def _content_of(r: Resource) -> str:
+            # 正文 DB 优先;content 未回填时读本机 uploads 兜底(与 admin.py 取文档行为一致)
+            if r.content:
+                return r.content
+            if (r.url or "").endswith("/md"):
+                return file_service.read_upload_md(r.id) or ""
+            return ""
+
         sql = select(Resource)
         if type:
             sql = sql.where(Resource.type == type)
@@ -196,7 +206,7 @@ class SearchResourceTool(Tool):
             if name_hits:
                 hits, mode = name_hits[:5], "name"
             else:
-                hits = [r for r in items if kw in (r.content or "").lower()][:5]
+                hits = [r for r in items if kw in _content_of(r).lower()][:5]
                 mode = "content"
         else:
             hits, mode = items[:5], "all"
@@ -206,17 +216,23 @@ class SearchResourceTool(Tool):
 
         lines = [f"找到 {len(hits)} 个相关资源：\n"]
         for r in hits:
+            content = _content_of(r)
             lines.append(f"- {r.icon} {r.name}（类型: {r.type}）\n  URL: {r.url or '无'} | 状态: {r.status}\n  描述: {(r.description or '')[:200]}\n")
-            # name 命中且正文已入库:附正文预览,LLM 可直接阅读文档内容
-            if mode == "name" and r.content:
-                preview = r.content[:2000]
-                more = f"\n  …（全文共 {len(r.content)} 字，可换更精确的正文关键词继续检索）" if len(r.content) > 2000 else ""
+            # name 命中且正文可读:附正文预览,LLM 可直接阅读文档内容
+            if mode == "name" and content:
+                preview = content[:2000]
+                more = f"\n  …（全文共 {len(content)} 字，可换更精确的正文关键词继续检索）" if len(content) > 2000 else ""
                 lines.append(f"  正文:\n{preview}{more}\n")
+            elif mode == "name":
+                # 正文不可读(content 未入库且本机无文件)时必须显式告知,
+                # 否则 LLM 会凭文档名+描述臆造内容当作文档事实输出(实测发生过)
+                lines.append("  ⚠️ 正文暂不可读（内容未同步到本机）。禁止凭文档名称或描述推测文档内容；"
+                             "请如实告知用户:文档已收录、正文待同步,并给出文档 URL。\n")
             elif mode == "content":
-                idx = r.content.lower().find(kw)
+                idx = content.lower().find(kw)
                 start = max(0, idx - 150)
-                end = min(len(r.content), idx + len(kw) + 150)
-                snippet = ("…" if start > 0 else "") + r.content[start:end] + ("…" if end < len(r.content) else "")
+                end = min(len(content), idx + len(kw) + 150)
+                snippet = ("…" if start > 0 else "") + content[start:end] + ("…" if end < len(content) else "")
                 lines.append(f"  正文命中片段: {snippet}\n")
         return ToolResult.ok("\n".join(lines))
 
