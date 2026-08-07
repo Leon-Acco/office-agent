@@ -14,7 +14,7 @@ from backend.models.session import Session, Message
 from backend.models.knowledge import KnowledgeCandidate
 from backend.models.task import TaskCard
 from backend.models.governance import Repository
-from backend.models.resource import Skill, Tool
+from backend.models.resource import Skill, Tool, Resource
 
 router = APIRouter(prefix="/api", tags=["dashboard"])
 
@@ -51,12 +51,17 @@ async def get_dashboard(db: AsyncSession = Depends(get_db)):
         select(func.count(Message.id)).where(Message.role == "assistant")
     )).scalar() or 0
 
-    # 知识条目数
+    # 知识资产数 = 已发布知识条目 + 资源中心文档(两类知识载体合并计数,
+    # 用户视角上传文档即知识资产;卡片 label 仍叫「已发布知识」)
     knowledge_count = (await db.execute(
         select(func.count(KnowledgeCandidate.id)).where(
             KnowledgeCandidate.status == "published"
         )
     )).scalar() or 0
+    doc_count = (await db.execute(
+        select(func.count(Resource.id)).where(Resource.type == "document")
+    )).scalar() or 0
+    knowledge_count += doc_count
 
     # 协作任务数
     task_count = (await db.execute(

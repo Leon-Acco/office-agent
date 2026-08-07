@@ -42,7 +42,7 @@ class SearchKnowledgeTool(Tool):
 
     @property
     def description(self) -> str:
-        desc = "搜索已审核通过的知识库，查找业务文档、FAQ、最佳实践。输入搜索关键词。"
+        desc = "搜索已审核通过的知识库，查找业务文档、FAQ、最佳实践。输入搜索关键词。知识库未命中时自动退到资源中心已上传文档全文检索。"
         if self._default_domain and self._default_domain != "通用":
             desc += f"（默认按「{self._default_domain}」领域过滤，可传 domain 参数检索其他领域）"
         return desc
@@ -86,8 +86,42 @@ class SearchKnowledgeTool(Tool):
             items = [k for k in items if query.lower() in (k.title + k.body_md).lower()][:3]
 
         if not items:
-            scope_hint = f"（领域：{effective_domain}）" if effective_domain else ""
-            return ToolResult.ok(f"未找到与 '{query}' 相关的知识{scope_hint}。")
+            # 知识库未命中 → 退到资源中心已上传文档全文检索
+            # (上传文档即知识资产,与 dashboard「已发布知识」KPI 口径一致;
+            #  否则模型会报「未收录/无法全文搜索」误导用户,文档明明已上传)
+            from backend.services import file_service  # 函数内 import，避免模块级循环依赖
+            docs = (await db.execute(
+                select(Resource).where(Resource.type == "document")
+            )).scalars().all()
+            q = (query or "").strip().lower()
+            doc_hits: list[tuple[Resource, str]] = []
+            if q:
+                for r in docs:
+                    content = r.content or ""
+                    if not content and (r.url or "").endswith("/md"):
+                        content = file_service.read_upload_md(r.id) or ""
+                    if q in (r.name or "").lower() or q in content.lower():
+                        doc_hits.append((r, content))
+            if not doc_hits:
+                scope_hint = f"（领域：{effective_domain}）" if effective_domain else ""
+                return ToolResult.ok(f"未找到与 '{query}' 相关的知识{scope_hint}，资源中心文档也未命中。")
+
+            lines = [f"知识库未收录该主题，但在资源中心文档中找到 {len(doc_hits)} 个相关文档：\n"]
+            for r, content in doc_hits[:3]:
+                lines.append(f"### 📄 {r.name}\n")
+                if content:
+                    idx = content.lower().find(q)
+                    if idx >= 0:
+                        start = max(0, idx - 200)
+                        end = min(len(content), idx + len(q) + 300)
+                        snippet = ("…" if start > 0 else "") + content[start:end] + ("…" if end < len(content) else "")
+                        lines.append(f"正文命中片段: {snippet}\n")
+                    else:
+                        # 名称命中:附正文开头预览
+                        lines.append(f"正文预览:\n{content[:800]}\n")
+                else:
+                    lines.append("⚠️ 正文暂不可读（内容未同步到本机）。禁止凭文档名称推测内容，如实告知用户。\n")
+            return ToolResult.ok("\n".join(lines))
 
         lines = [f"找到 {len(items)} 条相关知识：\n"]
         for k in items:
