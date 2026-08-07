@@ -16,6 +16,7 @@ AgentRunner - 借鉴 nanobot agent/runner.py
 5. 工具执行错误转为 ToolResult.error（不抛异常）
 """
 import json
+import re
 import asyncio
 from dataclasses import dataclass, field
 from typing import AsyncIterator, Callable
@@ -27,6 +28,26 @@ from backend.runtime.tool_base import ToolResult
 from backend.runtime.hooks import AgentHook, AgentHookContext, ToolEvent, AuditHook, SecurityHook
 from backend.runtime.consolidator import Consolidator, estimate_messages_tokens
 from backend.services.llm import LLM_BASE_URL, LLM_API_KEY, LLM_MODEL
+
+
+# 同一标识符连续重复 >=6 次(如 "getCodeExcerpt getCodeExcerpt ..."):
+# GLM 在预算耗尽兜底轮(tools=None)仍想调工具时,会把工具名当正文复读刷屏,
+# 实测事故现场为「两段正常中文 + 工具名复读数百次」(协作草案刷屏 bug)
+# 仅匹配标识符形 token(字母/下划线开头),排除 │、─ 等制表符,避免误伤 ASCII 架构图/空单元格表格
+_TOOL_NAME_SPAM_RE = re.compile(r"([A-Za-z_][\w.-]*)(?:\s+\1){5,}")
+
+
+def _strip_tool_name_spam(text: str) -> str:
+    """
+    截断模型退化产生的工具名刷屏(同一标识符连续重复 >=6 次)
+    保留刷屏点之前的正常内容;纯刷屏返回空串,由上层空输出重试兜底
+    """
+    if not text:
+        return text
+    m = _TOOL_NAME_SPAM_RE.search(text)
+    if not m:
+        return text
+    return text[:m.start()].rstrip()
 
 
 @dataclass
@@ -167,9 +188,9 @@ class AgentRunner:
                 # 继续下一轮迭代（让 LLM 看到工具结果后决定下一步）
                 continue
 
-            # 终答
+            # 终答(清洗工具名刷屏;纯刷屏清洗后为空,由上层空输出重试兜底)
             return AgentRunResult(
-                final_content=response.content,
+                final_content=_strip_tool_name_spam(response.content),
                 messages=messages,
                 tools_used=tools_used,
                 stop_reason="completed",
@@ -179,14 +200,28 @@ class AgentRunner:
 
         # 预算耗尽兜底（借鉴 nanobot finalize_on_max_iterations）
         # 做一次无工具的收尾调用，给用户一个回答（8000:GLM 推理模型的思考链与正文共享预算,4000 易被思考吃光）
+        # 明确禁止罗列工具名:tools=None 时模型仍想调工具,会把工具名当正文复读刷屏
         messages.append({
             "role": "user",
-            "content": "请基于已收集的信息，给出完整、详细的最终回答（结论 + 依据 + 展开说明）。",
+            "content": "请基于已收集的信息，给出完整、详细的最终回答（结论 + 依据 + 展开说明）。"
+                       "禁止输出或重复任何工具名称、调用计划，直接写最终结论。",
         })
         final = await self.provider.chat(messages, tools=None, max_tokens=8000)
+        final_content = _strip_tool_name_spam(final.content or "")
+
+        # 清洗后所剩无几(响应主体就是刷屏):换更强指令重试一次,取更好的一份
+        if len(final_content) < 200 and final_content != (final.content or ""):
+            messages.append({
+                "role": "user",
+                "content": "你的上一次输出退化成了工具名重复。请忘掉工具调用,直接基于已有信息写一份完整的文字结论。",
+            })
+            retry = await self.provider.chat(messages, tools=None, max_tokens=8000)
+            retry_content = _strip_tool_name_spam(retry.content or "")
+            if len(retry_content) > len(final_content):
+                final_content = retry_content
 
         return AgentRunResult(
-            final_content=final.content or "抱歉，我在处理过程中超出了预算限制。请尝试简化问题。",
+            final_content=final_content or "抱歉，我在处理过程中超出了预算限制。请尝试简化问题。",
             messages=messages,
             tools_used=tools_used,
             stop_reason="budget_exhausted",
@@ -205,11 +240,15 @@ class AgentRunner:
         流式执行 Agent ReAct 循环
 
         yield 事件格式：
+            {"type": "thinking"}                              # 每轮 LLM 调用前:思考占位(GLM 推理期无正文输出)
             {"type": "tool.start", "name": "searchKnowledge", "arguments": {...}}
             {"type": "tool.result", "name": "searchKnowledge", "result": "..."}
-            {"type": "answer.chunk", "content": "片段文本"}
             {"type": "answer.completed", "final_content": "...", "tools_used": [...]}
             {"type": "error", "message": "..."}
+
+        输出节奏(第 8 轮需求):正文不再逐 chunk 下发,思考期只发 thinking 占位,
+        终答攒齐后由 answer.completed 一次性输出(一口气给出完整回答);
+        中间轮伴随工具调用的过渡文本不上屏(工具叙事已足够表达进度)
         """
         # 构建初始消息
         system_prompt = build_system_prompt(context)
@@ -236,14 +275,14 @@ class AgentRunner:
                     messages = await self.consolidator.consolidate(messages, self.provider)
                     print(f"[Consolidator] 已压缩上下文，当前 {estimate_messages_tokens(messages)} tokens")
 
-                # 流式调用 LLM
+                # 流式调用 LLM(思考期先发占位,正文攒缓冲、终答一次性输出)
+                yield {"type": "thinking"}
                 accumulated_content = ""
                 final_response = None
 
                 async for chunk_text, response in self.provider.chat_stream(messages, tools=tools):
                     if chunk_text:
                         accumulated_content += chunk_text
-                        yield {"type": "answer.chunk", "content": chunk_text}
                     if response:
                         final_response = response
 
@@ -312,10 +351,10 @@ class AgentRunner:
                     # 继续下一轮（让 LLM 看到工具结果）
                     continue
 
-                # 终答
+                # 终答(清洗工具名刷屏后一次性输出)
                 yield {
                     "type": "answer.completed",
-                    "final_content": accumulated_content,
+                    "final_content": _strip_tool_name_spam(accumulated_content),
                     "tools_used": tools_used,
                     "iterations": iteration + 1,
                 }
@@ -325,19 +364,22 @@ class AgentRunner:
                 yield {"type": "error", "message": str(e)}
                 return
 
-        # 预算耗尽兜底
+        # 预算耗尽兜底(禁止罗列工具名:tools=None 时模型会把工具名当正文复读刷屏)
         messages.append({
             "role": "user",
-            "content": "请基于已收集的信息，给出完整、详细的最终回答（结论 + 依据 + 展开说明）。",
+            "content": "请基于已收集的信息，给出完整、详细的最终回答（结论 + 依据 + 展开说明）。"
+                       "禁止输出或重复任何工具名称、调用计划，直接写最终结论。",
         })
         try:
+            yield {"type": "thinking"}
+            fallback_content = ""
             async for chunk_text, response in self.provider.chat_stream(messages, tools=None, max_tokens=8000):
                 if chunk_text:
-                    yield {"type": "answer.chunk", "content": chunk_text}
+                    fallback_content += chunk_text
                 if response and response.is_final:
                     yield {
                         "type": "answer.completed",
-                        "final_content": response.content,
+                        "final_content": _strip_tool_name_spam(response.content or fallback_content),
                         "tools_used": tools_used,
                         "iterations": context.budget.max_steps,
                     }

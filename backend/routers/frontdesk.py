@@ -636,7 +636,11 @@ async def chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
                     async for event in runner.execute_stream(question, context, tool_registry, db=db):
                         evt_type = event.get("type")
 
-                        if evt_type == "tool.start":
+                        if evt_type == "thinking":
+                            # 思考占位:GLM 推理期无正文,前端显示「正在思考…」
+                            yield _sse_event("thinking", {})
+
+                        elif evt_type == "tool.start":
                             yield _sse_event("tool.start", {
                                 "name": event["name"],
                                 "arguments": event.get("arguments", {}),
@@ -729,7 +733,11 @@ async def chat(req: ChatRequest, db: AsyncSession = Depends(get_db)):
                     async for event in runner.execute_stream(question, context, tool_registry, db=db):
                         evt_type = event.get("type")
 
-                        if evt_type == "tool.start":
+                        if evt_type == "thinking":
+                            # 思考占位:GLM 推理期无正文,前端显示「正在思考…」
+                            yield _sse_event("thinking", {})
+
+                        elif evt_type == "tool.start":
                             yield _sse_event("tool.start", {
                                 "name": event["name"],
                                 "arguments": event.get("arguments", {}),

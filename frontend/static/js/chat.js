@@ -866,6 +866,10 @@ const ChatModule = {
               this.streamToolResult(aiMsg, aiMsg.tools.length - 1);
             }
             aiMsg.toolActive = false;
+          } else if (eventType === 'thinking') {
+            // 思考占位:GLM 推理期无正文输出(思考完正文由 answer.completed 一口气给出)
+            aiMsg.thinking = true;
+            this.renderMessages();
           } else if (eventType === 'answer.chunk') {
             aiMsg.content += data.content;
             this.scheduleStreamRender();   // 节流渲染,避免 chunk 高频触发全文重建
@@ -1231,7 +1235,7 @@ const ChatModule = {
       : (typeof cuteAvatar === 'function' ? cuteAvatar(agentName, agentEmoji, 36) : agentEmoji);
 
     const spinnerHtml = msg.streaming && !msg.content
-      ? '<div style="display:flex;gap:6px;padding:8px 0;"><span style="width:8px;height:8px;background:var(--text-tertiary);border-radius:50%;animation:chat-bounce 1.4s infinite ease-in-out both;"></span><span style="width:8px;height:8px;background:var(--text-tertiary);border-radius:50%;animation:chat-bounce 1.4s infinite ease-in-out both;animation-delay:-0.16s;"></span><span style="width:8px;height:8px;background:var(--text-tertiary);border-radius:50%;animation:chat-bounce 1.4s infinite ease-in-out both;animation-delay:-0.32s;"></span></div>'
+      ? `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;">${msg.thinking ? '<span style="font-size:12px;color:var(--text-tertiary);">正在思考…</span>' : ''}<span style="display:flex;gap:6px;"><span style="width:8px;height:8px;background:var(--text-tertiary);border-radius:50%;animation:chat-bounce 1.4s infinite ease-in-out both;"></span><span style="width:8px;height:8px;background:var(--text-tertiary);border-radius:50%;animation:chat-bounce 1.4s infinite ease-in-out both;animation-delay:-0.16s;"></span><span style="width:8px;height:8px;background:var(--text-tertiary);border-radius:50%;animation:chat-bounce 1.4s infinite ease-in-out both;animation-delay:-0.32s;"></span></span></div>`
       : '';
 
     // 流式消息必须始终渲染带固定 id 的内容容器(spinner 也放在容器内),
