@@ -972,6 +972,8 @@ function setLoginBtnLoading(loginBtn, loadingText) {
   if (!loginBtn) return;
   loginBtn.disabled = true;
   loginBtn.classList.add('is-loading');
+  // 逐字模糊版走钩子重拆 char span;无钩子(极端兜底)直写 textContent
+  if (window.__lpSetBtnLabel) { window.__lpSetBtnLabel(loginBtn, loadingText); return; }
   const label = loginBtn.querySelector('.lp-btn-label');
   if (label) label.textContent = loadingText;
   else loginBtn.textContent = loadingText;
@@ -981,6 +983,7 @@ function resetLoginBtn(loginBtn) {
   loginBtn.disabled = false;
   loginBtn.classList.remove('is-loading');
   loginBtn.classList.remove('is-success');
+  if (window.__lpSetBtnLabel) { window.__lpSetBtnLabel(loginBtn, '登录'); return; }
   const label = loginBtn.querySelector('.lp-btn-label');
   if (label) label.textContent = '登录';
   else loginBtn.textContent = '登录';
@@ -1034,8 +1037,11 @@ async function handleLogin() {
   if (loginBtn) {
     loginBtn.classList.remove('is-loading');
     loginBtn.classList.add('is-success');
-    const label = loginBtn.querySelector('.lp-btn-label');
-    if (label) label.textContent = '✓ 欢迎回来';
+    if (window.__lpSetBtnLabel) window.__lpSetBtnLabel(loginBtn, '✓ 欢迎回来');
+    else {
+      const label = loginBtn.querySelector('.lp-btn-label');
+      if (label) label.textContent = '✓ 欢迎回来';
+    }
   }
   if (window.ParticleFace && window.ParticleFace.explode) {
     window.ParticleFace.explode();

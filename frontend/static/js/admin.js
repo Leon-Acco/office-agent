@@ -1349,7 +1349,13 @@ const AdminModule = {
     const cards = items.map(item => {
       const mode = item.mode || 'READ_ONLY';
       const risk = item.risk_level || 'LOW';
-      const isMcp = !!item.endpoint;
+      // stdio 型 MCP 无 endpoint，连接信息在 config.command 里
+      let cfgObj = {};
+      try { cfgObj = item.config ? JSON.parse(item.config) : {}; } catch (e) {}
+      const isStdio = !item.endpoint && !!cfgObj.command;
+      const isMcp = !!item.endpoint || isStdio;
+      const targetText = item.endpoint
+        || (isStdio ? `stdio: ${cfgObj.command} ${(cfgObj.args || []).join(' ')}` : '（内置工具，无端点）');
       const viewBtn = isMcp
         ? `<button class="edit-btn" style="font-size:13px;" onclick="AdminModule.viewMcpTools('${item.id}', '${esc(item.name).replace(/'/g, "\\'")}')">查看工具</button> ` : '';
       return `<div style="background:white;border:1px solid var(--border-default,#e5e5e5);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:8px;">
@@ -1358,7 +1364,7 @@ const AdminModule = {
           <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:var(--bg-hover,#f3f4f6);color:var(--text-secondary);">${esc(item.type || '-')}</span>
         </div>
         <div style="font-family:Consolas,Menlo,monospace;font-size:12px;color:var(--text-tertiary);">${esc(item.tool_key || '-')}</div>
-        <div style="font-size:12px;color:var(--text-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(item.endpoint || '')}">${esc(item.endpoint || '（内置工具，无端点）')}</div>
+        <div style="font-size:12px;color:var(--text-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(targetText)}">${esc(targetText)}</div>
         <div style="display:flex;gap:6px;align-items:center;">
           <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${mode === 'WRITE' ? '#FEE2E2' : '#ECFDF5'};color:${mode === 'WRITE' ? '#DC2626' : '#059669'};">${esc(mode)}</span>
           <span style="font-size:11px;padding:2px 8px;border-radius:4px;background:${riskBg[risk]||'#F3F4F6'};color:${riskColors[risk]||'#737373'};">${esc(risk)}</span>
@@ -1997,8 +2003,8 @@ const AdminModule = {
         <h3 style="font-size:18px;font-weight:600;margin-bottom:8px;"><span class="material-symbols-outlined" style="font-size:20px;vertical-align:-4px;">cable</span> 连接 MCP Server</h3>
         <p style="font-size:12px;color:var(--text-secondary);margin-bottom:20px;">粘贴 mcpServers 配置 JSON，先测试连接预览发现的工具，确认后落库。员工（Agent）绑定后即可在对话中调用远端工具。</p>
         <div class="form-group">
-          <label>MCP 配置（mcpServers JSON）</label>
-          <textarea id="mcp-config-json" rows="8" placeholder='{"mcpServers":{"my-mcp-server":{"type":"mcp","url":"http://host:port/sse","headers":{"appKey":"..."}}}}' style="width:100%;background:var(--bg-input);border:1px solid transparent;border-radius:8px;padding:8px 13px;font-size:12px;font-family:monospace;resize:vertical;"></textarea>
+          <label>MCP 配置（mcpServers JSON，支持 SSE「url」与 stdio「command」两种）</label>
+          <textarea id="mcp-config-json" rows="8" placeholder='{"mcpServers":{"my-sse-server":{"url":"http://host:port/sse","headers":{"appKey":"..."}},"my-stdio-server":{"command":"npx","args":["-y","some-mcp","--stdio"],"env":{"TOKEN":"..."}}}}' style="width:100%;background:var(--bg-input);border:1px solid transparent;border-radius:8px;padding:8px 13px;font-size:12px;font-family:monospace;resize:vertical;"></textarea>
         </div>
         <div id="mcp-test-result" style="margin-top:12px;"></div>
         <div style="display:flex;gap:8px;margin-top:24px;">
@@ -2017,7 +2023,8 @@ const AdminModule = {
   },
 
   /**
-   * 解析弹窗中的 mcpServers JSON，返回 {serverName: {url, headers}} 映射
+   * 解析弹窗中的 mcpServers JSON，返回 {serverName: server} 映射
+   * 两种形态：SSE {url, headers}；stdio {command, args, env}（如 npx 启动的本地 server）
    */
   _parseMcpConfig() {
     const raw = document.getElementById('mcp-config-json').value;
@@ -2025,7 +2032,12 @@ const AdminModule = {
     const servers = cfg.mcpServers || cfg;
     const out = {};
     for (const [name, s] of Object.entries(servers)) {
-      if (s && s.url) out[name] = { url: s.url, headers: s.headers || {} };
+      if (!s) continue;
+      if (s.url) {
+        out[name] = { transport: 'sse', url: s.url, headers: s.headers || {} };
+      } else if (s.command) {
+        out[name] = { transport: 'stdio', command: s.command, args: s.args || [], env: s.env || {} };
+      }
     }
     return out;
   },
@@ -2044,7 +2056,7 @@ const AdminModule = {
       return;
     }
     if (!Object.keys(servers).length) {
-      box.innerHTML = `<div style="padding:12px;border-radius:8px;background:#FEF2F2;color:#DC2626;font-size:13px;">✕ 未找到有效的 server 配置（需要 url 字段）</div>`;
+      box.innerHTML = `<div style="padding:12px;border-radius:8px;background:#FEF2F2;color:#DC2626;font-size:13px;">✕ 未找到有效的 server 配置（需要 url「SSE」或 command「stdio」字段）</div>`;
       return;
     }
     btn.disabled = true;
@@ -2053,10 +2065,14 @@ const AdminModule = {
     const tested = [];
     for (const [name, s] of Object.entries(servers)) {
       try {
+        // stdio 首次经 npx 拉包较慢，超时放宽到 60s
+        const payload = s.transport === 'stdio'
+          ? { endpoint: '', config: JSON.stringify({ command: s.command, args: s.args, env: s.env }), timeout_ms: 60000 }
+          : { endpoint: s.url, config: JSON.stringify({ headers: s.headers }) };
         const res = await fetch('/api/admin/tools/test-connection', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ endpoint: s.url, config: JSON.stringify({ headers: s.headers }) }),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (res.ok && data.ok) {
@@ -2093,21 +2109,28 @@ const AdminModule = {
     let okCount = 0, failMsgs = [];
     for (const s of tested) {
       const slug = s.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+      // stdio 型无 endpoint，连接信息整体落 config；SSE 型维持 endpoint + headers
+      const isStdio = s.transport === 'stdio';
+      const body = {
+        name: s.name,
+        tool_key: slug,
+        type: 'mcp',
+        mode: 'READ_ONLY',
+        endpoint: isStdio ? '' : s.url,
+        risk_level: 'LOW',
+        timeout_ms: isStdio ? 60000 : 15000,
+        description: isStdio
+          ? `MCP Server（stdio）：${s.command} ${(s.args || []).join(' ')}`
+          : `MCP Server：${s.url}`,
+        config: JSON.stringify(isStdio
+          ? { transport: 'stdio', command: s.command, args: s.args, env: s.env }
+          : { transport: 'sse', headers: s.headers }),
+      };
       try {
         const res = await fetch('/api/admin/tools', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: s.name,
-            tool_key: slug,
-            type: 'mcp',
-            mode: 'READ_ONLY',
-            endpoint: s.url,
-            risk_level: 'LOW',
-            timeout_ms: 15000,
-            description: `MCP Server：${s.url}`,
-            config: JSON.stringify({ headers: s.headers, transport: 'sse' }),
-          }),
+          body: JSON.stringify(body),
         });
         if (res.ok) okCount++;
         else failMsgs.push(`${s.name}: ${(await res.json()).detail || '创建失败'}`);

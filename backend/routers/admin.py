@@ -585,16 +585,25 @@ async def list_tool_options(db: AsyncSession = Depends(get_db)):
 
 
 class ToolTestConnBody(BaseModel):
-    endpoint: str
+    endpoint: str = ""   # SSE 型必填；stdio 型为空，改由 config.command 拉起子进程
     config: str = ""
     timeout_ms: int = 10000
 
 
+def _config_has_stdio_command(config_str: str) -> bool:
+    """config JSON 含 command 即 stdio 型 MCP Server（无需 endpoint）"""
+    try:
+        cfg = json.loads(config_str) if config_str else {}
+    except (json.JSONDecodeError, TypeError):
+        return False
+    return isinstance(cfg, dict) and bool(cfg.get("command"))
+
+
 @router.post("/tools/test-connection")
 async def test_tool_connection(body: ToolTestConnBody):
-    """测试 MCP Server 连接：连接 + list_tools 预览发现的工具（不落库）"""
-    if not body.endpoint.strip():
-        raise HTTPException(400, "endpoint 不能为空")
+    """测试 MCP Server 连接：连接 + list_tools 预览发现的工具（不落库），支持 SSE 与 stdio 两种 transport"""
+    if not body.endpoint.strip() and not _config_has_stdio_command(body.config):
+        raise HTTPException(400, "endpoint（SSE）与 command（stdio）至少配置一个")
     try:
         from backend.runtime.mcp_client import test_mcp_connection
         return await test_mcp_connection(body.endpoint.strip(), body.config, body.timeout_ms)
@@ -608,8 +617,8 @@ async def list_mcp_server_tools(tid: str, db: AsyncSession = Depends(get_db)):
     t = (await db.execute(select(Tool).where(Tool.id == tid))).scalar_one_or_none()
     if not t:
         raise HTTPException(404, "工具不存在")
-    if not t.endpoint:
-        raise HTTPException(400, "该工具未配置 endpoint，无法拉取远程工具清单")
+    if not t.endpoint and not _config_has_stdio_command(t.config or ""):
+        raise HTTPException(400, "该工具既未配置 endpoint 也未配置 stdio command，无法拉取远程工具清单")
     try:
         from backend.runtime.mcp_client import test_mcp_connection
         return await test_mcp_connection(t.endpoint, t.config or "", t.timeout_ms or 10000)
